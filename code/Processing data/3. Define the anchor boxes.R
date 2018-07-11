@@ -33,6 +33,8 @@ plot(exp(anchor_box_info$width), exp(anchor_box_info$height), pch = 19, cex = 0.
 
 # Add anchor box info to BOX_INFOS
 
+BOX_INFOS$bbox_center_row <- (BOX_INFOS[,4] + BOX_INFOS[,5])/2
+BOX_INFOS$bbox_center_col <- (BOX_INFOS[,2] + BOX_INFOS[,3])/2
 BOX_INFOS$bbox_width <- exp(anchor_box_info$width)
 BOX_INFOS$bbox_height <- exp(anchor_box_info$height)
 BOX_INFOS$anchor_width <- anchor_boxs$width[kmean_model$cluster]

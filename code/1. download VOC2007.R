@@ -22,4 +22,13 @@ if (!file.exists(test_local_path)) {
   download.file(url = path_test, destfile = test_local_path, method = 'wget', quiet = TRUE)
 }
 
-#untar(tarfile = train_local_path, exdir = data_dict)
+# Unzip files
+
+if (!file.exists(paste0(data_dict, 'train'))) {
+  untar(tarfile = train_local_path, exdir = paste0(data_dict, 'train'))
+}
+
+if (!file.exists(paste0(data_dict, 'test'))) {
+  untar(tarfile = test_local_path, exdir = paste0(data_dict, 'test'))
+}
+

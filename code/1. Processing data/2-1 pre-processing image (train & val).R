@@ -55,7 +55,7 @@ resize_size <- 256
 # Image_path (Training and Validation set)
 
 train_data_dict <- 'data/train/VOCdevkit/VOC2007/'
-resize_data_dict <- 'data/resize_img/'
+resize_data_path <- 'data/train_val_jpg_list.RData'
 box_info_path <- 'data/train_val_info.RData'
 
 # Read annotations
@@ -69,9 +69,8 @@ num_img <- length(Annotation_list)
 set.seed(0)
 train_list <- sample(x = 1:num_img, size = num_img * 0.8, replace = FALSE)
 
-if (!dir.exists(resize_data_dict)) {dir.create(resize_data_dict)}
-
-TRAIN_BOX_INFOS <- list()
+BOX_INFOS_LIST <- list()
+IMG_LIST <- list()
 
 t0 <- Sys.time()
 
@@ -113,25 +112,25 @@ for (i in 1:num_img) {
   
   if (i %in% train_list) {
     
-    TRAIN_BOX_INFOS[[i]] <- data.frame(img_box_info,
-                                       file = xml_list$annotation$filename[[1]],
-                                       img_cat = 'train',
-                                       img_ID = i,
-                                       stringsAsFactors = FALSE)
+    BOX_INFOS_LIST[[i]] <- data.frame(img_box_info,
+                                      file = xml_list$annotation$filename[[1]],
+                                      img_cat = 'train',
+                                      img_ID = i,
+                                      stringsAsFactors = FALSE)
     
   } else {
     
-    TRAIN_BOX_INFOS[[i]] <- data.frame(img_box_info,
-                                       file = xml_list$annotation$filename[[1]],
-                                       img_cat = 'val',
-                                       img_ID = i,
-                                       stringsAsFactors = FALSE)
+    BOX_INFOS_LIST[[i]] <- data.frame(img_box_info,
+                                      file = xml_list$annotation$filename[[1]],
+                                      img_cat = 'val',
+                                      img_ID = i,
+                                      stringsAsFactors = FALSE)
     
   }
   
-  save(resized_img, file = paste0(resize_data_dict, i, '.RData'))
+  IMG_LIST[[i]] <- writeJPEG(resized_img)
   
-  if (i %% 100 == 0) {
+  if (i %% 1000 == 0) {
     
     Show_img(resized_img, box_info = img_box_info, show_grid = FALSE)
     
@@ -143,6 +142,7 @@ for (i in 1:num_img) {
   
 }
 
-BOX_INFOS <- rbindlist(TRAIN_BOX_INFOS) %>% setDF()
+BOX_INFOS <- rbindlist(BOX_INFOS_LIST) %>% setDF()
 
+save(IMG_LIST, file = resize_data_path)
 save(BOX_INFOS, file = box_info_path)

@@ -55,7 +55,7 @@ resize_size <- 256
 # Image_path (Test set)
 
 test_data_dict <- 'data/test/VOCdevkit/VOC2007/'
-resize_data_path <- 'data/test_img_array.RData'
+resize_data_path <- 'data/test_jpg_list.RData'
 box_info_path <- 'data/test_info.RData'
 
 # Read annotations
@@ -66,9 +66,8 @@ Annotation_list <- list.files(paste0(test_data_dict, 'Annotations'), full.names 
 
 num_img <- length(Annotation_list)
 
-img_array <- array(0, dim = c(resize_size, resize_size, 3, num_img))
-
 TEST_BOX_INFOS <- list()
+IMG_LIST <- list()
 
 t0 <- Sys.time()
 
@@ -114,9 +113,9 @@ for (i in 1:num_img) {
                                     img_ID = i,
                                     stringsAsFactors = FALSE)
   
-  img_array[,,,i] <- resized_img
+  IMG_LIST[[i]] <- writeJPEG(resized_img)
   
-  if (i %% 100 == 0) {
+  if (i %% 500 == 0) {
     
     Show_img(resized_img, box_info = img_box_info, show_grid = FALSE)
     
@@ -128,8 +127,7 @@ for (i in 1:num_img) {
   
 }
 
-save(img_array, file = resize_data_path)
-
 BOX_INFOS <- rbindlist(TEST_BOX_INFOS) %>% setDF()
 
+save(IMG_LIST, file = resize_data_path)
 save(BOX_INFOS, file = box_info_path)

@@ -2,11 +2,12 @@
 # Libraries
 
 library(OpenImageR)
+library(jpeg)
 library(mxnet)
 
 # box_info_path (Training and Validation set)
 
-resized_img_dir <- 'data/resize_img/'
+resize_data_path <- 'data/train_val_jpg_list.RData'
 revised_box_info_path <- 'data/train_val_info (for iterater).RData'
 anchor_boxs_path <- 'anchor_boxs.RData'
 
@@ -244,10 +245,11 @@ Decode_fun <- function (encode_array_list, anchor_boxs,
 
 # load(revised_box_info_path)
 # load(anchor_boxs_path)
+# load(resize_data_path)
 
 # img_id <- 3
 
-# load(paste0(resized_img_dir, img_id, '.RData'))
+# resized_img <- readJPEG(IMG_LIST[[img_id]])
 
 # sub_BOX_INFOS <- BOX_INFOS[BOX_INFOS$img_ID %in% img_id,]
 
@@ -267,11 +269,10 @@ Decode_fun <- function (encode_array_list, anchor_boxs,
 
 load(revised_box_info_path)
 load(anchor_boxs_path)
+load(resize_data_path)
 
 train_ids <- unique(BOX_INFOS[BOX_INFOS$img_cat == 'train','img_ID'])
 val_ids <- unique(BOX_INFOS[BOX_INFOS$img_cat == 'val','img_ID'])
-#train_ids <- unique(BOX_INFOS[BOX_INFOS$img_cat == 'train','file'])
-#val_ids <- unique(BOX_INFOS[BOX_INFOS$img_cat == 'val','file'])
 
 my_iterator_core <- function (batch_size, img_size = 256, resize_method = 'nearest',
                               sample = 'train', aug_crop = TRUE, aug_flip = TRUE) {
@@ -305,14 +306,12 @@ my_iterator_core <- function (batch_size, img_size = 256, resize_method = 'neare
     idx[idx > length(id_list)] = sample(1:length(id_list), sum(idx > length(id_list)))
     
     batch.box_info <- BOX_INFOS[BOX_INFOS$img_ID %in% id_list[idx],]
-    #batch.box_info <- BOX_INFOS[BOX_INFOS$file %in% id_list[idx],]
     
     img_array <- array(0, dim = c(img_size, img_size, 3, batch_size))
     
     for (i in 1:batch_size) {
       
-      read_img <- get(load(paste0(resized_img_dir, id_list[idx[i]], '.RData')))
-      #read_img <- readImage(paste0('data/train/VOCdevkit/VOC2007/JPEGImages/', id_list[idx[i]]))
+      read_img <- readJPEG(IMG_LIST[[id_list[idx[i]]]])
       
       if (!dim(read_img)[1] == img_size | !dim(read_img)[2] == img_size) {
         

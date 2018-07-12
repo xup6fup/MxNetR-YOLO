@@ -270,6 +270,8 @@ load(anchor_boxs_path)
 
 train_ids <- unique(BOX_INFOS[BOX_INFOS$img_cat == 'train','img_ID'])
 val_ids <- unique(BOX_INFOS[BOX_INFOS$img_cat == 'val','img_ID'])
+#train_ids <- unique(BOX_INFOS[BOX_INFOS$img_cat == 'train','file'])
+#val_ids <- unique(BOX_INFOS[BOX_INFOS$img_cat == 'val','file'])
 
 my_iterator_core <- function (batch_size, img_size = 256, resize_method = 'nearest',
                               sample = 'train', aug_crop = TRUE, aug_flip = TRUE) {
@@ -303,12 +305,14 @@ my_iterator_core <- function (batch_size, img_size = 256, resize_method = 'neare
     idx[idx > length(id_list)] = sample(1:length(id_list), sum(idx > length(id_list)))
     
     batch.box_info <- BOX_INFOS[BOX_INFOS$img_ID %in% id_list[idx],]
+    #batch.box_info <- BOX_INFOS[BOX_INFOS$file %in% id_list[idx],]
     
     img_array <- array(0, dim = c(img_size, img_size, 3, batch_size))
     
     for (i in 1:batch_size) {
       
       read_img <- get(load(paste0(resized_img_dir, id_list[idx[i]], '.RData')))
+      #read_img <- readImage(paste0('data/train/VOCdevkit/VOC2007/JPEGImages/', id_list[idx[i]]))
       
       if (!dim(read_img)[1] == img_size | !dim(read_img)[2] == img_size) {
         
@@ -350,12 +354,12 @@ my_iterator_core <- function (batch_size, img_size = 256, resize_method = 'neare
       img_array <- img_array[random.row+1:(img_size-32),random.col+1:(img_size-32),,]
       dim(img_array) <- revised_dim
       
-      batch.box_info[,c(11,12)] <- batch.box_info[,c(11,12)] * img_size / (img_size - 32)
-      batch.box_info[,c(10,13)] <- batch.box_info[,c(10,13)] * img_size / (img_size - 32)
+      batch.box_info[,c(11,12,14)] <- batch.box_info[,c(11,12,14)] * img_size / (img_size - 32)
+      batch.box_info[,c(10,13,15)] <- batch.box_info[,c(10,13,15)] * img_size / (img_size - 32)
       
       batch.box_info[,11] <- batch.box_info[,11] - random.col / img_size
       batch.box_info[,10] <- batch.box_info[,10] - random.row / img_size
-      
+
       batch.box_info[batch.box_info[,11] <= 0,11] <- 0
       batch.box_info[batch.box_info[,11] >= 1,11] <- 1
       batch.box_info[batch.box_info[,10] <= 0,10] <- 0
@@ -409,14 +413,24 @@ my_iterator_func <- setRefClass("Custom_Iter",
 
 # my_iter$reset()
 
-# for (i in 1:sample(10, 1)) {my_iter$iter.next()}
+# t0 <- Sys.time()
+ 
+# for (i in 1:sample(20, 1)) {my_iter$iter.next()}
  
 # test <- my_iter$value()
+ 
+# print(Sys.time() - t0)
  
 # img_seq <- sample(16, 1)
 
 # iter_img <- as.array(test$data)[,,,img_seq]
-# iter_box_info <- Decode_fun(test$label, anchor_boxs = anchor_boxs)
+ 
+# If you use 'aug_crop = TRUE', you need to revise the anchor_boxs
+ 
+# revised_anchor_boxs <- anchor_boxs
+# revised_anchor_boxs[,1:2] <- revised_anchor_boxs[,1:2] * 320 / (320 - 32)
+ 
+# iter_box_info <- Decode_fun(test$label, anchor_boxs = revised_anchor_boxs)
 
 # Show_img(img = iter_img, box_info = iter_box_info[iter_box_info$img_ID == img_seq,], show_grid = FALSE, n.grid = 7)
 

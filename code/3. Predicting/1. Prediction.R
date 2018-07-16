@@ -272,20 +272,19 @@ my_predict <- function (model, img, ctx = mx.gpu()) {
 
 YOLO_model <- mx.model.load('model/yolo model/yolo_v3', 0)
 
+# You can select to use train set or testing set (if you have conducted all codes for training)
+
+# resize_test_data_path <- 'data/test_jpg_list.RData'
+# resize_train_data_path <- 'data/train_val_jpg_list.RData'
+# anchor_boxs_path <- 'anchor_boxs (yolo v3).RData'
+
+# load(anchor_boxs_path)
+# load(resize_test_data_path)
+# load(resize_train_data_path)
+
 # Read jpg and resize
 
-# You can select to use train set or testing set
-
-resize_test_data_path <- 'data/test_jpg_list.RData'
-resize_train_data_path <- 'data/train_val_jpg_list.RData'
-anchor_boxs_path <- 'anchor_boxs (yolo v3).RData'
-
-load(anchor_boxs_path)
-load(resize_test_data_path)
-
-# Select a specific img
-
-img <- readJPEG(IMG_LIST[[1]])
+img <- readJPEG('test_img.jpeg')
 img <- resizeImage(image = img, width = 256, height = 256, method = 'bilinear')
 dim(img) <- c(256, 256, 3, 1)
 
@@ -297,5 +296,3 @@ pred_box_info <- Decode_fun(pred_list, anchor_boxs = anchor_boxs, cut_prob = 0.5
 # Show image
 
 Show_img(img = img[,,,1], box_info = pred_box_info, show_grid = FALSE)
-
-

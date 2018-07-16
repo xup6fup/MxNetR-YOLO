@@ -39,7 +39,7 @@ for (k in c(256, 288, 192, 320, 224)) {
   
 }
 
-val_iter <- my_iterator_func(iter = NULL, batch_size = 16,
+val_iter <- my_iterator_func(iter = NULL, batch_size = 50,
                              img_size = 256, resize_method = 'nearest',
                              sample = 'val', aug_crop = FALSE, aug_flip = FALSE)
 

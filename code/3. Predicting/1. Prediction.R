@@ -271,14 +271,13 @@ my_predict <- function (model, img, ctx = mx.gpu()) {
 # Load well-train model
 
 YOLO_model <- mx.model.load('model/yolo model/yolo_v3', 0)
+load('anchor_boxs (yolo v3).RData')
 
 # You can select to use train set or testing set (if you have conducted all codes for training)
 
 # resize_test_data_path <- 'data/test_jpg_list.RData'
 # resize_train_data_path <- 'data/train_val_jpg_list.RData'
-# anchor_boxs_path <- 'anchor_boxs (yolo v3).RData'
 
-# load(anchor_boxs_path)
 # load(resize_test_data_path)
 # load(resize_train_data_path)
 

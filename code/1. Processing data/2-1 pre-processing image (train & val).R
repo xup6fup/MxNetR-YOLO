@@ -13,35 +13,37 @@ library(OpenImageR)
 # The major challenge is that 'bottomleft' is the original point of "plot" function,
 # but the original point of image is 'topleft'
 
-Show_img <- function (img, box_info = NULL, col_bbox = '#00A80050', col_label = '#00A0A0FF',
+Show_img <- function (img, box_info = NULL, col_bbox = '#FFFFFF00', col_label = '#00A0A0FF',
                       show_grid = TRUE, n.grid = 8, col_grid = '#FF0000FF') {
   
   require(imager)
   
   par(mar = rep(0, 4))
   plot(NA, xlim = c(0.04, 0.96), ylim = c(0.96, 0.04), xaxt = "n", yaxt = "n", bty = "n")
-  img = as.raster(img)
+  img <- (img - min(img))/(max(img) - min(img))
+  img <- as.raster(img)
   rasterImage(img, 0, 1, 1, 0, interpolate=FALSE)
   
   if (!is.null(box_info)) {
     for (i in 1:nrow(box_info)) {
+      if (is.null(box_info$col[i])) {COL_LABEL <- col_label} else {COL_LABEL <- box_info$col[i]}
       text(x = (box_info[i,2] + box_info[i,3])/2, y = box_info[i,5],
            labels = paste0(box_info[i,1], ' (', formatC(box_info[i,6]*100, 0, format = 'f'), '%)'),
-           offset = 0.3, pos = 1, col = col_label, font = 2)
+           offset = 0.3, pos = 1, col = COL_LABEL, font = 2)
       rect(xleft = box_info[i,2], xright = box_info[i,3],
            ybottom = box_info[i,4], ytop = box_info[i,5],
-           col = col_bbox, border = col_label, lwd = 1.5)
+           col = col_bbox, border = COL_LABEL, lwd = 1.5)
     }
   }
   
   if (show_grid) {
     for (i in 1:n.grid) {
       if (i != n.grid) {
-        abline(a = i/n.grid, b = 0, col = col_grid, lwd = 1.5)
-        abline(v = i/n.grid, col = col_grid, lwd = 1.5)
+        abline(a = i/n.grid, b = 0, col = col_grid, lwd = 12/n.grid)
+        abline(v = i/n.grid, col = col_grid, lwd = 12/n.grid)
       }
       for (j in 1:n.grid) {
-        text((i-0.5)/n.grid, (j-0.5)/n.grid, paste0('(', j, ', ', i, ')'), col = 'red')
+        text((i-0.5)/n.grid, (j-0.5)/n.grid, paste0('(', j, ', ', i, ')'), col = 'red', cex = 8/n.grid)
       }
     }
   }

@@ -8,8 +8,8 @@ library(mxnet)
 # box_info_path (Training and Validation set)
 
 resize_data_path <- 'data/train_val_jpg_list.RData'
-revised_box_info_path <- 'data/train_val_info (for iterater).RData'
-anchor_boxs_path <- 'anchor_boxs.RData'
+revised_box_info_path <- 'data/train_val_info (yolo v3).RData'
+anchor_boxs_path <- 'anchor_boxs (yolo v3).RData'
 
 # Custom function
 
@@ -18,24 +18,26 @@ anchor_boxs_path <- 'anchor_boxs.RData'
 # but the original point of image is 'topleft'
 # The Show_img function can help us to encode the bbox info
 
-Show_img <- function (img, box_info = NULL, col_bbox = '#00A80050', col_label = '#00A0A0FF',
+Show_img <- function (img, box_info = NULL, col_bbox = '#FFFFFF00', col_label = '#00A0A0FF',
                       show_grid = TRUE, n.grid = 8, col_grid = '#FF0000FF') {
   
   require(imager)
   
   par(mar = rep(0, 4))
   plot(NA, xlim = c(0.04, 0.96), ylim = c(0.96, 0.04), xaxt = "n", yaxt = "n", bty = "n")
-  img = as.raster(img)
+  img <- (img - min(img))/(max(img) - min(img))
+  img <- as.raster(img)
   rasterImage(img, 0, 1, 1, 0, interpolate=FALSE)
   
   if (!is.null(box_info)) {
     for (i in 1:nrow(box_info)) {
+      if (is.null(box_info$col[i])) {COL_LABEL <- col_label} else {COL_LABEL <- box_info$col[i]}
       text(x = (box_info[i,2] + box_info[i,3])/2, y = box_info[i,5],
            labels = paste0(box_info[i,1], ' (', formatC(box_info[i,6]*100, 0, format = 'f'), '%)'),
-           offset = 0.3, pos = 1, col = col_label, font = 2)
+           offset = 0.3, pos = 1, col = COL_LABEL, font = 2)
       rect(xleft = box_info[i,2], xright = box_info[i,3],
            ybottom = box_info[i,4], ytop = box_info[i,5],
-           col = col_bbox, border = col_label, lwd = 1.5)
+           col = col_bbox, border = COL_LABEL, lwd = 1.5)
     }
   }
   
@@ -53,7 +55,7 @@ Show_img <- function (img, box_info = NULL, col_bbox = '#00A80050', col_label = 
   
 }
 
-Encode_fun <- function (box_info, n.grid = c(32, 16, 8), eps = 1e-8,
+Encode_fun <- function (box_info, n.grid = c(32, 16, 8), eps = 1e-8, n.anchor = 3,
                         obj_name = c('person', 'bird', 'cat', 'cow', 'dog',
                                      'horse', 'sheep', 'aeroplane', 'bicycle',
                                      'boat', 'bus', 'car', 'motorbike', 'train',
@@ -67,7 +69,7 @@ Encode_fun <- function (box_info, n.grid = c(32, 16, 8), eps = 1e-8,
   
   for (k in 1:length(n.grid)) {
     
-    out_array_list[[k]] <- array(0, dim = c(n.grid[k], n.grid[k], 3 * num_pred, length(img_IDs)))
+    out_array_list[[k]] <- array(0, dim = c(n.grid[k], n.grid[k], n.anchor * num_pred, length(img_IDs)))
     
   }
   
@@ -117,7 +119,11 @@ Decode_fun <- function (encode_array_list, anchor_boxs,
                                      'horse', 'sheep', 'aeroplane', 'bicycle',
                                      'boat', 'bus', 'car', 'motorbike', 'train',
                                      'bottle', 'chair', 'diningtable', 'pottedplant',
-                                     'sofa', 'tvmonitor')) {
+                                     'sofa', 'tvmonitor'),
+                        obj_col = c('#FF0000FF', '#00FF00FF', '#00FF00FF', '#00FF00FF', '#00FF00FF',
+                                    '#00FF00FF', '#00FF00FF', '#0000FFFF', '#0000FFFF', '#0000FFFF',
+                                    '#0000FFFF', '#0000FFFF', '#0000FFFF', '#0000FFFF', '#FFFF00FF',
+                                    '#FFFF00FF', '#FFFF00FF', '#FFFF00FF', '#FFFF00FF', '#FFFF00FF')) {
   
   num_list <- length(encode_array_list)
   num_img <- dim(encode_array_list[[1]])[4]
@@ -151,6 +157,11 @@ Decode_fun <- function (encode_array_list, anchor_boxs,
             
             encode_vec <- sub_encode_array[pos_over_cut_row[l],pos_over_cut_col[l],]
             
+            if (encode_vec[2] < 0) {encode_vec[2] <- 0}
+            if (encode_vec[2] > 1) {encode_vec[2] <- 1}
+            if (encode_vec[3] < 0) {encode_vec[3] <- 0}
+            if (encode_vec[3] > 1) {encode_vec[3] <- 1}
+            
             center_row <- (encode_vec[2] + (pos_over_cut_row[l] - 1))/dim(sub_encode_array)[1]
             center_col <- (encode_vec[3] + (pos_over_cut_col[l] - 1))/dim(sub_encode_array)[2]
             width <- exp(encode_vec[4]) * anchor_box[1,1]
@@ -163,6 +174,7 @@ Decode_fun <- function (encode_array_list, anchor_boxs,
                                        row_top = center_row-height/2,
                                        prob = encode_vec[1],
                                        img_ID = j,
+                                       col = obj_col[which.max(encode_vec[-c(1:5)])],
                                        stringsAsFactors = FALSE)
             
             sub_box_info <- rbind(sub_box_info, new_box_info)
@@ -175,40 +187,44 @@ Decode_fun <- function (encode_array_list, anchor_boxs,
       
     }
     
-    # Remove overlapping
-    
-    sub_box_info <- sub_box_info[order(sub_box_info$prob, decreasing = TRUE),]
-    
-    for (obj in unique(sub_box_info$obj_name)) {
+    if (!is.null(sub_box_info)) {
       
-      obj_sub_box_info <- sub_box_info[sub_box_info$obj_name == obj,]
+      # Remove overlapping
       
-      if (nrow(obj_sub_box_info) == 1) {
+      sub_box_info <- sub_box_info[order(sub_box_info$prob, decreasing = TRUE),]
+      
+      for (obj in unique(sub_box_info$obj_name)) {
         
-        box_info <- rbind(box_info, obj_sub_box_info)
+        obj_sub_box_info <- sub_box_info[sub_box_info$obj_name == obj,]
         
-      } else {
-        
-        overlap_seq <- NULL
-        
-        for (m in 2:nrow(obj_sub_box_info)) {
+        if (nrow(obj_sub_box_info) == 1) {
           
-          for (n in 1:(m-1)) {
+          box_info <- rbind(box_info, obj_sub_box_info)
+          
+        } else {
+          
+          overlap_seq <- NULL
+          
+          for (m in 2:nrow(obj_sub_box_info)) {
             
-            if (!n %in% overlap_seq) {
-
-              overlap_width <- min(obj_sub_box_info[m,3], obj_sub_box_info[n,3]) - max(obj_sub_box_info[m,2], obj_sub_box_info[n,2])
-              overlap_height <- min(obj_sub_box_info[m,4], obj_sub_box_info[n,4]) - max(obj_sub_box_info[m,5], obj_sub_box_info[n,5])
+            for (n in 1:(m-1)) {
               
-              if (overlap_width > 0 & overlap_height > 0) {
+              if (!n %in% overlap_seq) {
                 
-                old_size <- (obj_sub_box_info[n,3]-obj_sub_box_info[n,2])*(obj_sub_box_info[n,4]-obj_sub_box_info[n,5])
-                new_size <- (obj_sub_box_info[m,3]-obj_sub_box_info[m,2])*(obj_sub_box_info[m,4]-obj_sub_box_info[m,5])
-                overlap_size <- overlap_width * overlap_height
+                overlap_width <- min(obj_sub_box_info[m,3], obj_sub_box_info[n,3]) - max(obj_sub_box_info[m,2], obj_sub_box_info[n,2])
+                overlap_height <- min(obj_sub_box_info[m,4], obj_sub_box_info[n,4]) - max(obj_sub_box_info[m,5], obj_sub_box_info[n,5])
                 
-                if (overlap_size/(old_size + new_size - overlap_size) >= cut_overlap) {
+                if (overlap_width > 0 & overlap_height > 0) {
                   
-                  overlap_seq <- c(overlap_seq, m)
+                  old_size <- (obj_sub_box_info[n,3]-obj_sub_box_info[n,2])*(obj_sub_box_info[n,4]-obj_sub_box_info[n,5])
+                  new_size <- (obj_sub_box_info[m,3]-obj_sub_box_info[m,2])*(obj_sub_box_info[m,4]-obj_sub_box_info[m,5])
+                  overlap_size <- overlap_width * overlap_height
+                  
+                  if (overlap_size/min(old_size, new_size) >= cut_overlap) {
+                    
+                    overlap_seq <- c(overlap_seq, m)
+                    
+                  }
                   
                 }
                 
@@ -218,15 +234,15 @@ Decode_fun <- function (encode_array_list, anchor_boxs,
             
           }
           
-        }
-        
-        if (!is.null(overlap_seq)) {
+          if (!is.null(overlap_seq)) {
+            
+            obj_sub_box_info <- obj_sub_box_info[-overlap_seq,]
+            
+          }
           
-          obj_sub_box_info <- obj_sub_box_info[-overlap_seq,]
+          box_info <- rbind(box_info, obj_sub_box_info)
           
         }
-        
-        box_info <- rbind(box_info, obj_sub_box_info)
         
       }
       
@@ -281,11 +297,11 @@ my_iterator_core <- function (batch_size, img_size = 256, resize_method = 'neare
   
   if (sample == 'train') {
     
-    batch_per_epoch <- ceiling(length(train_ids)/batch_size)
+    batch_per_epoch <- floor(length(train_ids)/batch_size)
     
   } else {
     
-    batch_per_epoch <- ceiling(length(val_ids)/batch_size)
+    batch_per_epoch <- floor(length(val_ids)/batch_size)
     
   }
   
@@ -302,8 +318,9 @@ my_iterator_core <- function (batch_size, img_size = 256, resize_method = 'neare
     
     if (sample == 'train') {id_list <- train_ids} else {id_list <- val_ids}
     
-    idx = 1:batch_size + (batch - 1) * batch_size
-    idx[idx > length(id_list)] = sample(1:length(id_list), sum(idx > length(id_list)))
+    idx <- 1:batch_size + (batch - 1) * batch_size
+    idx[idx > length(id_list)] <- sample(1:(idx[1]-1), sum(idx > length(id_list)))
+    idx <- sort(idx)
     
     batch.box_info <- BOX_INFOS[BOX_INFOS$img_ID %in% id_list[idx],]
     
@@ -370,7 +387,7 @@ my_iterator_core <- function (batch_size, img_size = 256, resize_method = 'neare
     for (k in 1:length(label)) {label[[k]] <- mx.nd.array(label[[k]])}
     data <- mx.nd.array(img_array)
     
-    return(list(data = data, label = label))
+    return(list(data = data, label1 = label[[1]], label2 = label[[2]], label3 = label[[3]]))
     
   }
   
@@ -429,9 +446,9 @@ my_iterator_func <- setRefClass("Custom_Iter",
 # revised_anchor_boxs <- anchor_boxs
 # revised_anchor_boxs[,1:2] <- revised_anchor_boxs[,1:2] * 320 / (320 - 32)
  
-# iter_box_info <- Decode_fun(test$label, anchor_boxs = revised_anchor_boxs)
+# label_list <- list(test$label1, test$label2, test$label3)
+# iter_box_info <- Decode_fun(label_list, anchor_boxs = revised_anchor_boxs)
 
 # Show_img(img = iter_img, box_info = iter_box_info[iter_box_info$img_ID == img_seq,], show_grid = FALSE, n.grid = 7)
-
 
 

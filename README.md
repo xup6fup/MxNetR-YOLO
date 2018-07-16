@@ -18,15 +18,18 @@ Training stage
 
 The first step for using MxNet to train a yolo model is to build an iterator. You can use the codes ["1. Encode, Decode & Iterator.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/code/2.%20Training/1.%20Encode%2C%20Decode%20%26%20Iterator.R) for conducting this process. It is worth noting that bounding boxes are needed to encode as a special form for following training. Moreover, the encoded labels also need to pass a decoding process for restoring bounding boxes. The encode and decode function are the core of the yolo model. If you want to clearly understand the principle of yolo model, you can dismantle these functions to learn. The test codes for generating images are also included in that code, let's try it!
 
-The next step is to define the model architecture. We use a pretrained model (training by imagenet for image recognition) and fine tune it. I select a lightweight model: "MobileNet v2", and it is contributed by [yuantangliang](https://github.com/yuantangliang). His repository provides a pretrained model for downloading ["MobileNet-v2-Mxnet"](https://github.com/yuantangliang/MobileNet-v2-Mxnet). For details with Google's MobileNets, please read the following papers:
-
-- [v1] [MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications](https://arxiv.org/abs/1704.04861)
-- [v2] [Inverted Residuals and Linear Bottlenecks: Mobile Networks for Classification, Detection and Segmentation](https://arxiv.org/abs/1801.04381)
-
-The top-1/5 accuracy rates by using single center crop (crop size: 224x224, image size: 256xN):
-
-Network|Top-1|Top-5|sha256sum|Architecture
-:---:|:---:|:---:|:---:|:---:
-MobileNet v2| 71.90| 90.49| a3124ce7 (13.5 MB)| [netscope](http://ethereon.github.io/netscope/#/gist/d01b5b8783b4582a42fe07bd46243986)
+The next step is to define the model architecture. We use a pretrained model (training by imagenet for image recognition) and fine tune it. 
 
 
+
+
+Model performance
+---
+
+Finally, we get a 50.4% MAP50 in testing set. Following image is the selected predicting results by our model:
+
+<p align="center">
+  <img src="Pred_example.jepg">
+</p>
+
+Because this is a simple example for yolo v3, our database only includes 4,008 training images and 1,003 validation images, so I consider this result is good.

@@ -4,8 +4,10 @@
 
 # Session Data files
 .RData
+voc2007/data/*
 data/*
 model/*
+coco2017/*
 
 # Example code in package build process
 *-Ex.R

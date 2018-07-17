@@ -56,9 +56,9 @@ resize_size <- 256
 
 # Image_path (Training and Validation set)
 
-train_data_dict <- 'data/train/VOCdevkit/VOC2007/'
-resize_data_path <- 'data/train_val_jpg_list.RData'
-box_info_path <- 'data/train_val_info.RData'
+train_data_dict <- 'voc2007/data/train/VOCdevkit/VOC2007/'
+resize_data_path <- 'voc2007/data/train_val_jpg_list.RData'
+box_info_path <- 'voc2007/data/train_val_info.RData'
 
 # Read annotations
 

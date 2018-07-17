@@ -1,9 +1,9 @@
 
-source('code/2. Training/1. Encode, Decode & Iterator.R')
-source('code/2. Training/3. Support functions.R')
+source('voc2007/code/2. Training/1. Encode, Decode & Iterator.R')
+source('voc2007/code/2. Training/3. Support functions.R')
 
-resize_test_data_path <- 'data/test_jpg_list.RData'
-revised_test_box_info_path <- 'data/test_info.RData'
+resize_test_data_path <- 'voc2007/data/test_jpg_list.RData'
+revised_test_box_info_path <- 'voc2007/data/test_info.RData'
 IoU_cut <- 0.5
 
 YOLO_model <- mx.model.load('model/yolo model/yolo_v3', 0)
@@ -43,6 +43,7 @@ close(pb)
 
 pred_box_info <- rbindlist(pred_box_info) %>% setDF()
 
+BOX_INFOS$IoU <- 0
 pred_box_info$IoU <- 0
 
 for (i in 1:nrow(pred_box_info)) {
@@ -55,6 +56,7 @@ for (i in 1:nrow(pred_box_info)) {
   }
   
   pred_box_info$IoU[i] <- max(IoUs)
+  BOX_INFOS$IoU[BOX_INFOS$img_ID == pred_box_info[i,'img_ID']][which.max(IoUs)] <- 1
   
 }
 
@@ -68,8 +70,9 @@ for (i in 1:length(obj_names)) {
   if (sum(obj_label) == 0) {
     class_list[i] <- 0
   } else {
-    class_list[i] <- AP_function(vbYreal = obj_label,
-                                 vdYhat = pred_box_info[pred_box_info[,1] %in% obj_names[i],'prob'])
+    num_miss <- sum(BOX_INFOS$IoU == 1 & BOX_INFOS[,1] %in% obj_names[i])
+    class_list[i] <- AP_function(vbYreal = c(obj_label, rep(1, num_miss)),
+                                 vdYhat = c(pred_box_info[pred_box_info[,1] %in% obj_names[i],'prob'], rep(0, num_miss)))
   }
   
 }

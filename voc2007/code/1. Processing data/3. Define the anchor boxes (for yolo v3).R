@@ -1,9 +1,9 @@
 
 # box_info_path (Training and Validation set)
 
-original_box_info_path <- 'data/train_val_info.RData'
-revised_box_info_path <- 'data/train_val_info (yolo v3).RData'
-anchor_boxs_path <- 'anchor_boxs (yolo v3).RData'
+original_box_info_path <- 'voc2007/data/train_val_info.RData'
+revised_box_info_path <- 'voc2007/data/train_val_info (yolo v3).RData'
+anchor_boxs_path <- 'voc2007/anchor_boxs (yolo v3).RData'
 
 # Start to define anchor boxes 
 

@@ -7,7 +7,7 @@ path_test <- 'http://pjreddie.com/media/files/VOCtest_06-Nov-2007.tar'
 
 # Start to download
 
-data_dict <- 'data/'
+data_dict <- 'voc2007/data/'
 
 if (!dir.exists(data_dict)) {dir.create(data_dict)}
 

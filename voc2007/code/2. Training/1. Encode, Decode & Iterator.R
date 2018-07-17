@@ -7,9 +7,9 @@ library(mxnet)
 
 # box_info_path (Training and Validation set)
 
-resize_data_path <- 'data/train_val_jpg_list.RData'
-revised_box_info_path <- 'data/train_val_info (yolo v3).RData'
-anchor_boxs_path <- 'anchor_boxs (yolo v3).RData'
+resize_data_path <- 'voc2007/data/train_val_jpg_list.RData'
+revised_box_info_path <- 'voc2007/data/train_val_info (yolo v3).RData'
+anchor_boxs_path <- 'voc2007/anchor_boxs (yolo v3).RData'
 
 # Custom function
 

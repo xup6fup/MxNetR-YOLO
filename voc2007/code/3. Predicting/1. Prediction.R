@@ -1,4 +1,8 @@
 
+library(mxnet)
+library(jpeg)
+library(OpenImageR)
+
 # Custom predict function
 
 Show_img <- function (img, box_info = NULL, col_bbox = '#FFFFFF00', col_label = '#00A0A0FF',
@@ -271,15 +275,17 @@ my_predict <- function (model, img, ctx = mx.gpu()) {
 # Load well-train model
 
 YOLO_model <- mx.model.load('model/yolo model/yolo_v3', 0)
-load('anchor_boxs (yolo v3).RData')
+load('voc2007/anchor_boxs (yolo v3).RData')
 
 # You can select to use train set or testing set (if you have conducted all codes for training)
 
-# resize_test_data_path <- 'data/test_jpg_list.RData'
-# resize_train_data_path <- 'data/train_val_jpg_list.RData'
+# resize_test_data_path <- 'voc2007/data/test_jpg_list.RData'
+# resize_train_data_path <- 'voc2007/data/train_val_jpg_list.RData'
 
 # load(resize_test_data_path)
 # load(resize_train_data_path)
+ 
+# img <- readJPEG(IMG_LIST[[4]])
 
 # Read jpg and resize
 

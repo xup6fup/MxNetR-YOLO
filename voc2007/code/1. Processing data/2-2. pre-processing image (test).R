@@ -56,9 +56,9 @@ resize_size <- 256
 
 # Image_path (Test set)
 
-test_data_dict <- 'data/test/VOCdevkit/VOC2007/'
-resize_data_path <- 'data/test_jpg_list.RData'
-box_info_path <- 'data/test_info.RData'
+test_data_dict <- 'voc2007/data/test/VOCdevkit/VOC2007/'
+resize_data_path <- 'voc2007/data/test_jpg_list.RData'
+box_info_path <- 'voc2007/data/test_info.RData'
 
 # Read annotations
 

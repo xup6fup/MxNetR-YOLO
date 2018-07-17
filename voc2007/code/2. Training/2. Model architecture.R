@@ -30,7 +30,23 @@ library(magrittr)
 # Convolution layer for specific mission and training new parameters
 
 # 1. Additional 2 layers architecture for better learning
-
+ 
+upsampling_function <- function (updata, downdata, num_filters = 256, name = 'lvl1') {
+   
+  bn <- mx.symbol.BatchNorm(data = updata, fix_gamma = FALSE, name = paste0(name, '_up_bn'))
+  relu <- mx.symbol.Activation(data = bn, act.type = "relu", name = paste0(name, '_up_relu'))
+  deconv <- mx.symbol.Deconvolution(data = relu, kernel = c(2, 2), stride = c(2, 2), pad = c(0, 0),
+                                    no.bias = TRUE, num.filter = num_filters, name = paste0(name, '_up_deconv'))
+  new_list <- list()
+  new_list[[1]] <- downdata
+  new_list[[2]] <- deconv
+  
+  concat_map <- mx.symbol.concat(data = new_list, num.args = 2, dim = 1, name = paste0(name, "_concat_map"))
+   
+  return(concat_map)
+   
+}
+ 
 YOLO_map_function <- function (indata, num_filters = c(128, 128), final_map = 75, num_box = 3, name = 'lvl1') {
   
   for (i in 1:length(num_filters)) {
@@ -70,10 +86,13 @@ YOLO_map_function <- function (indata, num_filters = c(128, 128), final_map = 75
   
 }
 
+up_lvl2 <- upsampling_function(updata = lvl3_out, downdata = lvl2_out, num_filters = 256, name = 'lvl2')
+up_lvl1 <- upsampling_function(updata = up_lvl2, downdata = lvl1_out, num_filters = 256, name = 'lvl2')
+
 yolomap_list <- list()
 
-yolomap_list[[1]] <- YOLO_map_function(indata = lvl1_out, num_filters = c(128, 128, 128, 128), final_map = 75, name = 'lvl1')
-yolomap_list[[2]] <- YOLO_map_function(indata = lvl2_out, num_filters = c(256, 256, 256), final_map = 75, name = 'lvl2')
+yolomap_list[[1]] <- YOLO_map_function(indata = up_lvl1, num_filters = c(512, 512), final_map = 75, name = 'lvl1')
+yolomap_list[[2]] <- YOLO_map_function(indata = up_lvl2, num_filters = c(512, 512), final_map = 75, name = 'lvl2')
 yolomap_list[[3]] <- YOLO_map_function(indata = lvl3_out, num_filters = c(512, 512), final_map = 75, name = 'lvl3')
 
 # 2. Custom loss function

@@ -173,6 +173,7 @@ model_AP_func <- function (model, Iterator, IoU_cut = 0.5) {
   label_box_info <- rbindlist(label_box_info) %>% setDF()
   pred_box_info <- rbindlist(pred_box_info) %>% setDF()
   
+  label_box_info$IoU <- 0
   pred_box_info$IoU <- 0
   
   for (i in 1:nrow(pred_box_info)) {
@@ -185,6 +186,7 @@ model_AP_func <- function (model, Iterator, IoU_cut = 0.5) {
     }
     
     pred_box_info$IoU[i] <- max(IoUs)
+    label_box_info$IoU[label_box_info$img_ID == pred_box_info[i,'img_ID']][which.max(IoUs)] <- 1
     
   }
   
@@ -198,8 +200,9 @@ model_AP_func <- function (model, Iterator, IoU_cut = 0.5) {
     if (sum(obj_label) == 0) {
       class_list[i] <- 0
     } else {
-      class_list[i] <- AP_function(vbYreal = obj_label,
-                                   vdYhat = pred_box_info[pred_box_info[,1] %in% obj_names[i],'prob'])
+      num_miss <- sum(label_box_info$IoU == 1 & label_box_info[,1] %in% obj_names[i])
+      class_list[i] <- AP_function(vbYreal = c(obj_label, rep(1, num_miss)),
+                                   vdYhat = c(pred_box_info[pred_box_info[,1] %in% obj_names[i],'prob'], rep(0, num_miss)))
     }
     
   }
@@ -275,6 +278,8 @@ my.yolo_trainer <- function (symbol, Iterator_list, val_iter = NULL,
         
         while (Iterator_list[[j]]$iter.next()) {
           
+          batch_seq <- batch_seq + 1
+          
           my_values <- Iterator_list[[j]]$value()
           mx.exec.update.arg.arrays(my_executor, arg.arrays = my_values, match.name = TRUE)
           mx.exec.forward(my_executor, is.train = TRUE)
@@ -282,13 +287,18 @@ my.yolo_trainer <- function (symbol, Iterator_list, val_iter = NULL,
           update_args <- my_updater(weight = my_executor$ref.arg.arrays, grad = my_executor$ref.grad.arrays)
           mx.exec.update.arg.arrays(my_executor, update_args, skip.null = TRUE)
           batch_loss[[length(batch_loss) + 1]] <- as.array(my_executor$ref.outputs[[1]])
-          batch_seq <- batch_seq + 1
+          
+          if (batch_seq %% 50 == 0) {
+            message(paste0("Batch [", batch_seq, "] loss =  ", 
+                           formatC(mean(unlist(batch_loss)), 4, format = "f"), " (Speed:",
+                           formatC(batch_seq * batch_size/as.numeric(Sys.time() - t0, units = 'secs'), format = "f", 2), " samples/sec)"))
+          }
           
         }
         
         message(paste0("epoch = ", i,
                        ": loss = ", formatC(mean(unlist(batch_loss)), format = "f", 4),
-                       " (Speed: ", formatC(batch_seq * batch_size/as.numeric(Sys.time() - t0, units = 'secs'), format = "f", 2), " sample/secs)"))
+                       " (Speed: ", formatC(batch_seq * batch_size/as.numeric(Sys.time() - t0, units = 'secs'), format = "f", 2), " samples/sec)"))
         
         my_model <- mxnet:::mx.model.extract.model(symbol = symbol,
                                                    train.execs = list(my_executor))
@@ -297,7 +307,7 @@ my.yolo_trainer <- function (symbol, Iterator_list, val_iter = NULL,
         my_model[[2]] <- my_model[[2]][!names(my_model[[2]]) %in% dim(input_shape)]
         mx.model.save(my_model, prefix, i)
         
-        if (!is.null(val_iter)) {
+        if (!is.null(val_iter) & k != 1) {
           
           ap_list <- model_AP_func(model = my_model, Iterator = val_iter, IoU_cut = 0.5)
           map_list[i] <- mean(ap_list)
@@ -312,7 +322,7 @@ my.yolo_trainer <- function (symbol, Iterator_list, val_iter = NULL,
       deleted_list <- list.files(dirname(prefix), pattern = '*.params', full.names = TRUE)
       deleted_list <- deleted_list[!grepl('0000', deleted_list, fixed = TRUE)]
       
-      if (!is.null(val_iter)) {
+      if (!is.null(val_iter) & k != 1) {
         my_model <- mx.model.load(prefix = prefix, iteration = which.max(map_list))
       }
       

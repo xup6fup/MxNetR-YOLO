@@ -4,7 +4,10 @@
 
 # Session Data files
 .RData
-voc2007/data/*
+voc2007/data/test/*
+voc2007/data/train/*
+voc2007/data/VOCtest_06-Nov-2007.tar
+voc2007/data/VOCtrainval_06-Nov-2007.tar
 data/*
 model/yolo model (coco2017)/*
 coco2017/*

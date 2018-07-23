@@ -1,5 +1,5 @@
 
-source('voc2007/code/2. Training/1. Encode, Decode _ Iterator.R')
+source('voc2007/code/2. Training/1. Encode, Decode & Iterator.R')
 source('voc2007/code/2. Training/2. Model architecture.R')
 source('voc2007/code/2. Training/3. Support functions.R')
 

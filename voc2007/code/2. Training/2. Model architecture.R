@@ -7,67 +7,133 @@ library(magrittr)
 ## Define the model architecture
 ## Use pre-trained model and fine tuning
 
-# Load Resnet-34
+# Load MobileNet v2
 
- Pre_Trained_model <- mx.model.load('model/pretrained model/resnet-34', 0)
+Pre_Trained_model <- mx.model.load('model/pretrained model/mobilev2', 0)
 
 # Get the internal output
 
- Resnet_symbol <- Pre_Trained_model$symbol
+Mobile_symbol <- Pre_Trained_model$symbol
 
- Resnet_All_layer <- Resnet_symbol$get.internals()
+Mobile_All_layer <- Mobile_symbol$get.internals()
 
- lvl1_out <- which(Resnet_All_layer$outputs == '_plus6_output') %>% Resnet_All_layer$get.output()
- lvl2_out <- which(Resnet_All_layer$outputs == '_plus12_output') %>% Resnet_All_layer$get.output()
- lvl3_out <- which(Resnet_All_layer$outputs == 'relu1_output') %>% Resnet_All_layer$get.output()
+lvl1_out <- which(Mobile_All_layer$outputs == 'conv3_2_linear_bn_output') %>% Mobile_All_layer$get.output()
+lvl2_out <- which(Mobile_All_layer$outputs == 'conv4_7_linear_bn_output') %>% Mobile_All_layer$get.output()
+lvl3_out <- which(Mobile_All_layer$outputs == 'conv6_3_linear_bn_output') %>% Mobile_All_layer$get.output()
 
 # mx.symbol.infer.shape(lvl3_out, data = c(256, 256, 3, 7))$out.shapes
 
-# _plus6_output out shape = 32 32 128 n (if input shape = 256 256 3 n)
-# _plus12_output out shape = 16 16 256 n (if input shape = 256 256 3 n)
-# relu1_output out shape = 8 8 512 n (if input shape = 256 256 3 n)
+# conv3_2_linear_bn_output out shape = 32 32 32 n (if input shape = 256 256 3 n)
+# conv4_7_linear_bn_output out shape = 16 16 96 n (if input shape = 256 256 3 n)
+# conv6_3_linear_bn_output out shape = 8 8 320 n (if input shape = 256 256 3 n)
 
 # Convolution layer for specific mission and training new parameters
 
-# 1. Additional 2 layers architecture for better learning
- 
-upsampling_function <- function (updata, downdata, num_filters = 256, name = 'lvl1') {
-   
-  bn <- mx.symbol.BatchNorm(data = updata, fix_gamma = FALSE, name = paste0(name, '_up_bn'))
-  relu <- mx.symbol.Activation(data = bn, act.type = "relu", name = paste0(name, '_up_relu'))
-  deconv <- mx.symbol.Deconvolution(data = relu, kernel = c(2, 2), stride = c(2, 2), pad = c(0, 0),
-                                    no.bias = TRUE, num.filter = num_filters, name = paste0(name, '_up_deconv'))
+# 1. Additional some architecture for better learning
+
+# Libraries
+
+library(mxnet)
+library(magrittr)
+
+## Define the model architecture
+## Use pre-trained model and fine tuning
+
+# Load MobileNet v2
+
+Pre_Trained_model <- mx.model.load('model/pretrained model/mobilev2', 0)
+
+# Get the internal output
+
+Mobile_symbol <- Pre_Trained_model$symbol
+
+Mobile_All_layer <- Mobile_symbol$get.internals()
+
+lvl1_out <- which(Mobile_All_layer$outputs == 'block_4_6_output') %>% Mobile_All_layer$get.output()
+lvl2_out <- which(Mobile_All_layer$outputs == 'block_5_2_output') %>% Mobile_All_layer$get.output()
+lvl3_out <- which(Mobile_All_layer$outputs == 'conv6_3_linear_bn_output') %>% Mobile_All_layer$get.output()
+
+# mx.symbol.infer.shape(lvl1_out, data = c(256, 256, 3, 7))$out.shapes
+# mx.symbol.infer.shape(lvl2_out, data = c(256, 256, 3, 7))$out.shapes
+# mx.symbol.infer.shape(lvl3_out, data = c(256, 256, 3, 7))$out.shapes
+
+# block_4_6_output out shape = 32 32 64 n (if input shape = 256 256 3 n)
+# block_5_2_output out shape = 16 16 96 n (if input shape = 256 256 3 n)
+# conv6_3_linear_bn_output out shape = 8 8 320 n (if input shape = 256 256 3 n)
+
+# Convolution layer for specific mission and training new parameters
+
+# 1. Additional some architecture for better learning
+
+DECONV_function <- function (updata, downdata, num_filters = 256, name = 'lvl1') {
+  
+  deconv <- mx.symbol.Deconvolution(data = updata, kernel = c(2, 2), stride = c(2, 2), pad = c(0, 0),
+                                    no.bias = TRUE, num.filter = num_filters,
+                                    name = paste0(name, '_deconv'))
+  deconv_bn <- mx.symbol.BatchNorm(data = deconv, fix_gamma = FALSE, name = paste0(name, '_deconv_bn'))
+  deconv_relu <- mx.symbol.LeakyReLU(data = deconv_bn, act.type = 'leaky', slope = 0.1, name = paste0(name, '_deconv_relu'))
+  
   new_list <- list()
   new_list[[1]] <- downdata
-  new_list[[2]] <- deconv
+  new_list[[2]] <- deconv_relu
   
   concat_map <- mx.symbol.concat(data = new_list, num.args = 2, dim = 1, name = paste0(name, "_concat_map"))
-   
-  return(concat_map)
-   
-}
- 
-YOLO_map_function <- function (indata, num_filters = c(128, 128), final_map = 75, num_box = 3, name = 'lvl1') {
   
-  for (i in 1:length(num_filters)) {
+  return(concat_map)
+  
+}
+
+DWCONV_function <- function (indata, num_filters = 256, Inverse_coef = 6, residual = TRUE, name = 'lvl1', stage = 1) {
+  
+  expend_conv <- mx.symbol.Convolution(data = indata, kernel = c(1, 1), stride = c(1, 1), pad = c(0, 0),
+                                       no.bias = TRUE, num.filter = num_filters * Inverse_coef,
+                                       name = paste0(name, '_', stage, '_expend'))
+  expend_bn <- mx.symbol.BatchNorm(data = expend_conv, fix_gamma = FALSE, name = paste0(name, '_', stage, '_expend_bn'))
+  expend_relu <- mx.symbol.LeakyReLU(data = expend_bn, act.type = 'leaky', slope = 0.1, name = paste0(name, '_', stage, '_expend_relu'))
+  
+  dwise_conv <- mx.symbol.Convolution(data = expend_relu, kernel = c(3, 3), stride = c(1, 1), pad = c(1, 1),
+                                      no.bias = TRUE, num.filter = num_filters * Inverse_coef, num.group = num_filters * Inverse_coef,
+                                      name = paste0(name, '_', stage, '_dwise'))
+  dwise_bn <- mx.symbol.BatchNorm(data = dwise_conv, fix_gamma = FALSE, name = paste0(name, '_', stage, '_dwise_bn'))
+  dwise_relu <- mx.symbol.LeakyReLU(data = dwise_bn, act.type = 'leaky', slope = 0.1, name = paste0(name, '_', stage, '_dwise_relu'))
+  
+  restore_conv <- mx.symbol.Convolution(data = dwise_relu, kernel = c(1, 1), stride = c(1, 1), pad = c(0, 0),
+                                        no.bias = TRUE, num.filter = num_filters,
+                                        name = paste0(name, '_', stage, '_restore'))
+  restore_bn <- mx.symbol.BatchNorm(data = restore_conv, fix_gamma = FALSE, name = paste0(name, '_', stage, '_restore_bn'))
+  
+  if (residual) {
     
-    if (i == 1) {
-      bn <- mx.symbol.BatchNorm(data = indata, fix_gamma = FALSE, name = paste0(name, '_bn', i))
-    } else {
-      bn <- mx.symbol.BatchNorm(data = conv, fix_gamma = FALSE, name = paste0(name, '_bn', i))
-    }
+    block <- mx.symbol.broadcast_plus(lhs = indata, rhs = restore_bn, name = paste0(name, '_', stage, '_block'))
+    return(block)
     
-    relu <- mx.symbol.Activation(data = bn, act.type = "relu", name = paste0(name, '_relu', i))
+  } else {
     
-    conv <- mx.symbol.Convolution(data = relu, kernel = c(3, 3), stride = c(1, 1), pad = c(1, 1),
-                                  no.bias = TRUE, num.filter = num_filters[i], name = paste0(name, '_conv', i))
+    restore_relu <- mx.symbol.LeakyReLU(data = restore_bn, act.type = 'leaky', slope = 0.1, name = paste0(name, '_', stage, '_restore_relu'))
+    return(restore_relu)
     
   }
   
-  bn <- mx.symbol.BatchNorm(data = conv, fix_gamma = FALSE, name = paste0(name, '_bn.final'))
-  relu <- mx.symbol.Activation(data = bn, act.type = "relu", name = paste0(name, '_bn.final'))
-  conv <- mx.symbol.Convolution(data = relu, kernel = c(1, 1), stride = c(1, 1), pad = c(0, 0),
-                                no.bias = FALSE, num.filter = final_map, name = paste0(name, '_linearmap'))  
+  
+  
+}
+
+CONV_function <- function (indata, num_filters = 256, name = 'lvl1', stage = 1) {
+
+  conv <- mx.symbol.Convolution(data = indata, kernel = c(3, 3), stride = c(1, 1), pad = c(1, 1),
+                                no.bias = TRUE, num.filter = num_filters,
+                                name = paste0(name, '_', stage, '_conv'))
+  bn <- mx.symbol.BatchNorm(data = conv, fix_gamma = FALSE, name = paste0(name, '_', stage, '_bn'))
+  relu <- mx.symbol.LeakyReLU(data = bn, act.type = 'leaky', slope = 0.1, name = paste0(name, '_', stage, '_relu'))
+
+  return(relu)
+  
+}
+
+YOLO_map_function <- function (indata, final_map = 75, num_box = 3, name = 'lvl1') {
+  
+  conv <- mx.symbol.Convolution(data = indata, kernel = c(1, 1), stride = c(1, 1), pad = c(0, 0),
+                                no.bias = FALSE, num.filter = final_map, name = paste0(name, '_linearmap'))
   
   inter_split <- mx.symbol.SliceChannel(data = conv, num_outputs = final_map,
                                         axis = 1, squeeze_axis = FALSE, name = paste0(name, "_inter_split"))
@@ -75,7 +141,7 @@ YOLO_map_function <- function (indata, num_filters = c(128, 128), final_map = 75
   new_list <- list()
   
   for (k in 1:final_map) {
-    if (!(final_map %% num_box) %in% c(2:5)) {
+    if (!(final_map %% num_box) %in% c(4:5)) {
       new_list[[k]] <- mx.symbol.Activation(inter_split[[k]], act.type = 'sigmoid', name = paste0(name, "_yolomap_", k))
     }
   }
@@ -86,14 +152,27 @@ YOLO_map_function <- function (indata, num_filters = c(128, 128), final_map = 75
   
 }
 
-up_lvl2 <- upsampling_function(updata = lvl3_out, downdata = lvl2_out, num_filters = 256, name = 'lvl2')
-up_lvl1 <- upsampling_function(updata = up_lvl2, downdata = lvl1_out, num_filters = 256, name = 'lvl2')
+lvl3_conv_1 <- DWCONV_function(indata = lvl3_out, num_filters = 320, Inverse_coef = 3, residual = TRUE, name = 'lvl3', stage = 1)
+lvl3_conv_2 <- DWCONV_function(indata = lvl3_conv_1, num_filters = 320, Inverse_coef = 3, residual = TRUE, name = 'lvl3', stage = 2)
+lvl3_conv_3 <- CONV_function(indata = lvl3_conv_2, num_filters = 320, name = 'lvl3', stage = 3)
+
+lvl2_cat <- DECONV_function(updata = lvl3_conv_3, downdata = lvl2_out, num_filters = 160, name = 'lvl2')
+
+lvl2_conv_1 <- DWCONV_function(indata = lvl2_cat, num_filters = 256, Inverse_coef = 3, residual = TRUE, name = 'lvl2', stage = 1)
+lvl2_conv_2 <- DWCONV_function(indata = lvl2_conv_1, num_filters = 256, Inverse_coef = 3, residual = TRUE, name = 'lvl2', stage = 2)
+lvl2_conv_3 <- CONV_function(indata = lvl2_conv_2, num_filters = 256, name = 'lvl2', stage = 3)
+
+lvl1_cat <- DECONV_function(updata = lvl2_conv_3, downdata = lvl1_out, num_filters = 128, name = 'lvl1')
+
+lvl1_conv_1 <- DWCONV_function(indata = lvl1_cat, num_filters = 192, Inverse_coef = 3, residual = TRUE, name = 'lvl1', stage = 1)
+lvl1_conv_2 <- DWCONV_function(indata = lvl1_conv_1, num_filters = 192, Inverse_coef = 3, residual = TRUE, name = 'lvl1', stage = 2)
+lvl1_conv_3 <- CONV_function(indata = lvl1_conv_2, num_filters = 192, name = 'lvl1', stage = 3)
 
 yolomap_list <- list()
 
-yolomap_list[[1]] <- YOLO_map_function(indata = up_lvl1, num_filters = c(512, 512), final_map = 75, name = 'lvl1')
-yolomap_list[[2]] <- YOLO_map_function(indata = up_lvl2, num_filters = c(512, 512), final_map = 75, name = 'lvl2')
-yolomap_list[[3]] <- YOLO_map_function(indata = lvl3_out, num_filters = c(512, 512), final_map = 75, name = 'lvl3')
+yolomap_list[[1]] <- YOLO_map_function(indata = lvl1_conv_3, final_map = 75, name = 'lvl1')
+yolomap_list[[2]] <- YOLO_map_function(indata = lvl2_conv_3, final_map = 75, name = 'lvl2')
+yolomap_list[[3]] <- YOLO_map_function(indata = lvl3_conv_3, final_map = 75, name = 'lvl3')
 
 # 2. Custom loss function
 

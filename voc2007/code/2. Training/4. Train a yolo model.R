@@ -1,5 +1,5 @@
 
-source('voc2007/code/2. Training/1. Encode, Decode & Iterator.R')
+source('voc2007/code/2. Training/1. Encode, Decode _ Iterator.R')
 source('voc2007/code/2. Training/2. Model architecture.R')
 source('voc2007/code/2. Training/3. Support functions.R')
 
@@ -10,8 +10,10 @@ new_arg <- mxnet:::mx.model.init.params(symbol = final_yolo_loss,
                                                            label1 = c(28, 28, 75, 13), 
                                                            label2 = c(14, 14, 75, 13), 
                                                            label3 = c(7, 7, 75, 13)), 
-                                        output.shape = NULL, initializer = mxnet:::mx.init.Xavier(rnd_type = "uniform", magnitude = 2.24), 
+                                        output.shape = NULL, initializer = mx.init.uniform(0.01), 
                                         ctx = CTX)
+
+message('The total number of parameters = ', sum(sapply(lapply(new_arg$arg.params, dim), prod)))
 
 ## Bind Pre-trained Parameter into model
 
@@ -44,6 +46,7 @@ val_iter <- my_iterator_func(iter = NULL, batch_size = 50,
                              sample = 'val', aug_crop = FALSE, aug_flip = FALSE)
 
 YOLO_model <- my.yolo_trainer(symbol = final_yolo_loss, Iterator_list = my_iter_list, val_iter = val_iter,
-                              ctx = mx.gpu(), num_round = 5, num_iter = 30,
-                              prefix = 'model/yolo model/yolo_v3',
+                              ctx = mx.gpu(), num_round = 10, num_iter = 10,
+                              start_val = 8, start_unfixed = 1,
+                              prefix = 'model/yolo model (voc2007)/yolo_v3 (1)',
                               Fixed_NAMES = Layer_to_fixed, ARG.PARAMS = new_arg$arg.params)

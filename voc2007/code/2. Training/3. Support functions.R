@@ -132,20 +132,51 @@ IoU_function <- function (label, pred) {
   
 }
 
-AP_function <- function (vbYreal, vdYhat) {
+# Based on https://github.com/rafaelpadilla/Object-Detection-Metrics
+
+AP_function <- function (obj_IoU, obj_prob, num_obj, IoU_cut = 0.5) {
   
-  vbYreal_sort_d <- vbYreal[order(vdYhat, decreasing=TRUE)]
-  P_list <- cumsum(vbYreal_sort_d) * vbYreal_sort_d / seq_along(vbYreal_sort_d)
+  sort_obj_IoU <- obj_IoU[order(obj_prob, decreasing=TRUE)]
+  pred_postive <- sort_obj_IoU > IoU_cut
+  
+  cum_TP <- cumsum(pred_postive)
+  
+  P_list <- cum_TP * pred_postive / seq_along(pred_postive)
   P_list <- P_list[P_list!=0]
-  diff_P_list <- diff(P_list)
-  diff_P_list[diff_P_list < 0] <- 0
-  P_list <- P_list + c(diff_P_list, 0)
-  return(mean(P_list))
+  
+  while (sum(diff(P_list) > 0) >= 1) {
+    diff_P_list <- diff(P_list)
+    diff_P_list[diff_P_list < 0] <- 0
+    P_list <- P_list + c(diff_P_list, 0)
+  }
+  
+  return(sum(P_list)/num_obj)
   
 }
 
-model_AP_func <- function (model, Iterator, IoU_cut = 0.5) {
+model_AP_func <- function (model, Iterator, ctx = mx.gpu(), IoU_cut = 0.5) {
   
+  Iterator$reset()
+  Iterator$iter.next()
+  vlist <- Iterator$value()
+  img_array <- vlist$data
+  
+  require(magrittr)
+  
+  all_layers <- model$symbol$get.internals()
+  
+  lvl1_output <- which(all_layers$outputs == 'lvl1_yolomap_output') %>% all_layers$get.output()
+  lvl2_output <- which(all_layers$outputs == 'lvl2_yolomap_output') %>% all_layers$get.output()
+  lvl3_output <- which(all_layers$outputs == 'lvl3_yolomap_output') %>% all_layers$get.output()
+  
+  out <- mx.symbol.Group(c(lvl1_output, lvl2_output, lvl3_output))
+  executor <- mx.simple.bind(symbol = out, data = dim(img_array), ctx = ctx)
+  
+  need_arg <- ls(mx.symbol.infer.shape(out, data = c(224, 224, 3, 7))$arg.shapes)
+  
+  mx.exec.update.arg.arrays(executor, model$arg.params[names(model$arg.params) %in% need_arg], match.name = TRUE)
+  mx.exec.update.aux.arrays(executor, model$aux.params, match.name = TRUE)
+
   Iterator$reset()
   
   label_box_info <- list()
@@ -162,7 +193,14 @@ model_AP_func <- function (model, Iterator, IoU_cut = 0.5) {
     label_box_info[[num_batch]] <- Decode_fun(label_list, anchor_boxs = anchor_boxs, cut_prob = 0.5, cut_overlap = 0.5)
     label_box_info[[num_batch]]$img_ID <- label_box_info[[num_batch]]$img_ID + (num_batch - 1) * dim(img_array)[4]
     
-    pred_list <- my_predict(model = model, img = img_array, ctx = mx.gpu())
+    mx.exec.update.arg.arrays(executor, list(data = img_array), match.name = TRUE)
+    mx.exec.forward(executor, is.train = FALSE)
+    
+    pred_list <- list()
+    pred_list[[1]] <- as.array(executor$ref.outputs$lvl1_yolomap_output)
+    pred_list[[2]] <- as.array(executor$ref.outputs$lvl2_yolomap_output)
+    pred_list[[3]] <- as.array(executor$ref.outputs$lvl3_yolomap_output)
+    
     pred_box_info[[num_batch]] <- Decode_fun(pred_list, anchor_boxs = anchor_boxs, cut_prob = 0.5, cut_overlap = 0.5)
     pred_box_info[[num_batch]]$img_ID <- pred_box_info[[num_batch]]$img_ID + (num_batch - 1) * dim(img_array)[4]
     
@@ -195,19 +233,20 @@ model_AP_func <- function (model, Iterator, IoU_cut = 0.5) {
   
   for (i in 1:length(obj_names)) {
     
-    obj_label <- pred_box_info[pred_box_info[,1] %in% obj_names[i],'IoU'] > IoU_cut
+    obj_IoU <- pred_box_info[pred_box_info[,1] %in% obj_names[i],'IoU']
+    obj_prob <- pred_box_info[pred_box_info[,1] %in% obj_names[i],'prob']
+    num_obj <- sum(label_box_info$obj_name == obj_names[i])
     
-    if (sum(obj_label) == 0) {
-      class_list[i] <- 0
-    } else {
-      num_miss <- sum(label_box_info$IoU == 1 & label_box_info[,1] %in% obj_names[i])
-      class_list[i] <- AP_function(vbYreal = c(obj_label, rep(1, num_miss)),
-                                   vdYhat = c(pred_box_info[pred_box_info[,1] %in% obj_names[i],'prob'], rep(0, num_miss)))
-    }
+    obj_label <- pred_box_info[pred_box_info[,1] %in% obj_names[i],'IoU'] > IoU_cut
+    class_list[i] <- AP_function(obj_IoU = obj_IoU, obj_prob = obj_prob, num_obj = num_obj, IoU_cut = IoU_cut)
     
   }
   
   names(class_list) <- obj_names
+  
+  num_obj <- (dim(label_list[[1]])[3]/3) - 5
+  
+  if (length(class_list) < num_obj) {class_list[(length(class_list)+1):num_obj] <- 0}
   
   return(class_list)
   
@@ -215,14 +254,13 @@ model_AP_func <- function (model, Iterator, IoU_cut = 0.5) {
 
 my.yolo_trainer <- function (symbol, Iterator_list, val_iter = NULL,
                              ctx = mx.gpu(), num_round = 5, num_iter = 10,
-                             prefix = 'model/yolo model/yolo_v3',
+                             start_val = 5, start_unfixed = 5,
+                             prefix = 'model/yolo model/yolo_v3 (voc2007)',
                              Fixed_NAMES = NULL, ARG.PARAMS = NULL, AUX.PARAMS = NULL) {
   
-  
-  
-  lr_decay <- 1
-  
-  for (k in 1:num_round) {
+    for (k in 1:num_round) {
+    
+    if (!is.null(start_unfixed)) {if (k >= start_unfixed) {Fixed_NAMES <- NULL}}
     
     for (j in 1:length(Iterator_list)) {
       
@@ -238,7 +276,7 @@ my.yolo_trainer <- function (symbol, Iterator_list, val_iter = NULL,
       
       #1. Build an executor to train model
       
-      exec_list <- list(symbol = symbol, fixed.param = Fixed_NAMES, ctx = ctx, grad.req = "write")
+      exec_list <- list(symbol = symbol, fixed.param = c(Fixed_NAMES, names(input_shape)), ctx = ctx, grad.req = "write")
       exec_list <- append(exec_list, input_shape)
       my_executor <- do.call(mx.simple.bind, exec_list)
       
@@ -261,13 +299,32 @@ my.yolo_trainer <- function (symbol, Iterator_list, val_iter = NULL,
       mx.exec.update.arg.arrays(my_executor, ARG.PARAMS, match.name = TRUE)
       mx.exec.update.aux.arrays(my_executor, AUX.PARAMS, match.name = TRUE)
       
+      current_epoch <- (k - 1) * length(Iterator_list) + j
+      max_epoch <- length(Iterator_list) * num_round
+      
+      if (current_epoch <= max_epoch * 0.1) {
+        
+        my_optimizer <- mx.opt.create(name = "adam", learning.rate = 1e-3, beta1 = 0.9, beta2 = 0.999, wd = 1e-4)
+        
+      } else if (current_epoch > max_epoch * 0.1 & current_epoch <= max_epoch * 0.6) {
+        
+        my_optimizer <- mx.opt.create(name = "sgd", learning.rate = 1e-1, momentum = 0.9, wd = 1e-4)
+        
+      } else if (current_epoch > max_epoch * 0.6 & current_epoch <= max_epoch * 0.8) {
+        
+        my_optimizer <- mx.opt.create(name = "sgd", learning.rate = 1e-2, momentum = 0.9, wd = 1e-4)
+        
+      } else {
+        
+        my_optimizer <- mx.opt.create(name = "sgd", learning.rate = 1e-3, momentum = 0.9, wd = 1e-4)
+        
+      }
+      
+      my_updater <- mx.opt.get.updater(optimizer = my_optimizer, weights = my_executor$ref.arg.arrays)
+      
       if (!is.null(val_iter)) {map_list <- numeric(num_iter)}
       
       for (i in 1:num_iter) {
-        
-        my_optimizer <- mx.opt.create(name = "adam", learning.rate = 1e-3/sqrt(lr_decay), beta1 = 0.9, beta2 = 0.999, wd = 1e-4)
-        
-        my_updater <- mx.opt.get.updater(optimizer = my_optimizer, weights = my_executor$ref.arg.arrays)
         
         Iterator_list[[j]]$reset()
         batch_loss <-  list()
@@ -290,7 +347,7 @@ my.yolo_trainer <- function (symbol, Iterator_list, val_iter = NULL,
           
           if (batch_seq %% 50 == 0) {
             message(paste0("Batch [", batch_seq, "] loss =  ", 
-                           formatC(mean(unlist(batch_loss)), 4, format = "f"), " (Speed:",
+                           formatC(mean(unlist(batch_loss)), 4, format = "f"), " (Speed: ",
                            formatC(batch_seq * batch_size/as.numeric(Sys.time() - t0, units = 'secs'), format = "f", 2), " samples/sec)"))
           }
           
@@ -307,7 +364,7 @@ my.yolo_trainer <- function (symbol, Iterator_list, val_iter = NULL,
         my_model[[2]] <- my_model[[2]][!names(my_model[[2]]) %in% dim(input_shape)]
         mx.model.save(my_model, prefix, i)
         
-        if (!is.null(val_iter) & k != 1) {
+        if (!is.null(val_iter) & k >= start_val) {
           
           ap_list <- model_AP_func(model = my_model, Iterator = val_iter, IoU_cut = 0.5)
           map_list[i] <- mean(ap_list)
@@ -315,14 +372,12 @@ my.yolo_trainer <- function (symbol, Iterator_list, val_iter = NULL,
           
         }
         
-        lr_decay <- lr_decay + 1
-        
       }
       
       deleted_list <- list.files(dirname(prefix), pattern = '*.params', full.names = TRUE)
       deleted_list <- deleted_list[!grepl('0000', deleted_list, fixed = TRUE)]
       
-      if (!is.null(val_iter) & k != 1) {
+      if (!is.null(val_iter) & k >= start_val) {
         my_model <- mx.model.load(prefix = prefix, iteration = which.max(map_list))
       }
       
@@ -331,8 +386,6 @@ my.yolo_trainer <- function (symbol, Iterator_list, val_iter = NULL,
       
       ARG.PARAMS <- my_model[[2]]
       AUX.PARAMS <- my_model[[3]]
-      
-      lr_decay <- sqrt(lr_decay)
       
     }
     

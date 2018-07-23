@@ -6,9 +6,7 @@ This is a simple example for implementing the YOLO by MxNetR. The idea is devolo
 
 # If you just want to use this model for predicting
 
-You can use the code ["1. Prediction.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/voc2007/code/3.%20Predicting/1.%20Prediction.R) for predicting an image. You need to download [yolo_v3-0000.params](https://drive.google.com/open?id=1NDCaWLQev43K3pqhCSYVLNo2FVpVqgh_) and [yolo_v3-symbol.json](https://drive.google.com/open?id=1unzvMu0hKMLi2gmeLywqnXBguAUWQoZb) and put them in the folder 'model/yolo model' Please click my above superlink for download. 
-
-Here we use the 'test_img.jpeg' for testing the model. The left image is the raw image, and the right one is the prediction result by yolo v3 model.
+You can use the code ["1. Prediction.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/voc2007/code/3.%20Predicting/1.%20Prediction.R) for predicting an image. Here we prepared a well-trained model for your experiment. The 'yolo_v3 (1)-0000.params' and 'yolo_v3 (1)-symbol.json' can be found in the folder 'model/yolo model (voc2007)'. Here we use the 'test_img.jpeg' for testing the model. The left image is the raw image, and the right one is the prediction result by yolo v3 model.
 
 <p align="center">
   <img src="pred_test_img.jpeg">
@@ -32,14 +30,25 @@ Training stage
 
 The first step for using MxNet to train a yolo model is to build an iterator. You can use the codes ["1. Encode, Decode & Iterator.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/voc2007/code/2.%20Training/1.%20Encode%2C%20Decode%20%26%20Iterator.R) for conducting this process. It is worth noting that bounding boxes are needed to encode as a special form for following training. Moreover, the encoded labels also need to pass a decoding process for restoring bounding boxes. The encode and decode function are the core of the yolo model. If you want to clearly understand the principle of yolo model, you can dismantle these functions to learn. The test codes for generating images are also included in that code, let's try it!
 
-The next step is to define the model architecture. We use a pretrained model (training by imagenet for image recognition) and fine tune it. Here I select the resnet-34 to train a yolo model. The resnet-34 model can be downloaded from [MxNet model zoo](http://data.mxnet.io/models/imagenet/). The model should be saved in folder 'model/pretrained model' for following use. Of course, you can also select other model. The code ["2. Model architecture.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/voc2007/code/2.%20Training/2.%20Model%20architecture.R) includes yolo predict architecture and loss function, you can try to learn yolo v3 from these codes.
+The next step is to define the model architecture. We use a pretrained model (training by imagenet for image recognition) and fine tune it. Here we contains a MxNet implementation of a MobileNets_V2-based YOLO networks. For details with Google's MobileNets, please read the following papers:
+
+- [v1] [MobileNets: Efficient Convolutional Neural Networks for Mobile Vision Applications](https://arxiv.org/abs/1704.04861)
+- [v2] [Inverted Residuals and Linear Bottlenecks: Mobile Networks for Classification, Detection and Segmentation](https://arxiv.org/abs/1801.04381)
+
+The mobilenet-v2 model was contributed by [yuantangliang](https://github.com/yuantangliang)，and it can be downloaded from [this repository](https://github.com/yuantangliang/MobileNet-v2-Mxnet). The top-1/5 accuracy rates by using single center crop (crop size: 224x224, image size: 256xN):
+
+Network|Top-1|Top-5|sha256sum|Architecture
+:---:|:---:|:---:|:---:|:---:
+MobileNet v2| 71.90| 90.49| a3124ce7 (13.5 MB)| [netscope](http://ethereon.github.io/netscope/#/gist/d01b5b8783b4582a42fe07bd46243986)
+
+The model should be saved in folder 'model/pretrained model' for following use. If you want to train a more accurate model, you can to select other pretrained model from [MxNet model zoo](http://data.mxnet.io/models/imagenet/). I select a lightweight model is due to the limitation of Github that I cannot upload a file more than 100 MB. The code ["2. Model architecture.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/voc2007/code/2.%20Training/2.%20Model%20architecture.R) includes yolo predict architecture and loss function, you can try to learn yolo v3 from these codes.
 
 Now we can start to train this model! Because yolo v2 suggest that multi-scale training, so the training code is complex. The support functions can be found from ["3. Support functions.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/voc2007/code/2.%20Training/3.%20Support%20functions.R), and finally you can use ["4. Train a yolo model.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/voc2007/code/2.%20Training/4.%20Train%20a%20yolo%20model.R) for training this model. It is worth noting that the total training time in this sample is about 35 hours in single P100 GPU server.
 
 Model performance
 ---
 
-Finally, we get a 50.4% MAP50 in testing set. Following image is the selected predicting results by our model:
+Finally, we get a 16.03% MAP50 in testing set. Following image is the selected predicting results by our model:
 
 <p align="center">
   <img src="Pred_example.jpeg">

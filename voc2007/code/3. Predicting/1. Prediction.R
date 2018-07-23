@@ -5,6 +5,27 @@ library(OpenImageR)
 
 # Custom predict function
 
+IoU_function <- function (label, pred) {
+  
+  overlap_width <- min(label[,2], pred[,2]) - max(label[,1], pred[,1])
+  overlap_height <- min(label[,3], pred[,3]) - max(label[,4], pred[,4])
+  
+  if (overlap_width > 0 & overlap_height > 0) {
+    
+    pred_size <- (pred[,2]-pred[,1])*(pred[,3]-pred[,4])
+    label_size <- (label[,2]-label[,1])*(label[,3]-label[,4])
+    overlap_size <- overlap_width * overlap_height
+    
+    return(overlap_size/(pred_size + label_size - overlap_size))
+    
+  } else {
+    
+    return(0)
+    
+  }
+  
+}
+
 Show_img <- function (img, box_info = NULL, col_bbox = '#FFFFFF00', col_label = '#00A0A0FF',
                       show_grid = TRUE, n.grid = 8, col_grid = '#FF0000FF') {
   
@@ -198,20 +219,14 @@ Decode_fun <- function (encode_array_list, anchor_boxs,
               
               if (!n %in% overlap_seq) {
                 
+                overlap_prob <- IoU_function(label = obj_sub_box_info[m,2:5], pred = obj_sub_box_info[n,2:5])
+                
                 overlap_width <- min(obj_sub_box_info[m,3], obj_sub_box_info[n,3]) - max(obj_sub_box_info[m,2], obj_sub_box_info[n,2])
                 overlap_height <- min(obj_sub_box_info[m,4], obj_sub_box_info[n,4]) - max(obj_sub_box_info[m,5], obj_sub_box_info[n,5])
                 
-                if (overlap_width > 0 & overlap_height > 0) {
+                if (overlap_prob >= cut_overlap) {
                   
-                  old_size <- (obj_sub_box_info[n,3]-obj_sub_box_info[n,2])*(obj_sub_box_info[n,4]-obj_sub_box_info[n,5])
-                  new_size <- (obj_sub_box_info[m,3]-obj_sub_box_info[m,2])*(obj_sub_box_info[m,4]-obj_sub_box_info[m,5])
-                  overlap_size <- overlap_width * overlap_height
-                  
-                  if (overlap_size/min(old_size, new_size) >= cut_overlap) {
-                    
-                    overlap_seq <- c(overlap_seq, m)
-                    
-                  }
+                  overlap_seq <- c(overlap_seq, m)
                   
                 }
                 
@@ -274,7 +289,7 @@ my_predict <- function (model, img, ctx = mx.gpu()) {
 
 # Load well-train model
 
-YOLO_model <- mx.model.load('model/yolo model/yolo_v3', 0)
+YOLO_model <- mx.model.load('model/yolo model (voc2007)/yolo_v3 (1)', 0)
 load('voc2007/anchor_boxs (yolo v3).RData')
 
 # You can select to use train set or testing set (if you have conducted all codes for training)

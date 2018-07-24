@@ -6,7 +6,7 @@ resize_test_data_path <- 'voc2007/data/test_jpg_list.RData'
 revised_test_box_info_path <- 'voc2007/data/test_info.RData'
 IoU_cut <- 0.5
 
-YOLO_model <- mx.model.load('model/yolo model (voc2007)/yolo_v3 (1)', 0)
+YOLO_model <- mx.model.load('model/yolo model (voc2007)/yolo_v3 (2)', 0)
 
 load(resize_test_data_path)
 load(revised_test_box_info_path)
@@ -15,13 +15,13 @@ num_img <- length(IMG_LIST)
 seq_img <- 1
 pred_box_info <- list()
 
-pb <- txtProgressBar(max = ceiling(num_img/100), style = 3)
+pb <- txtProgressBar(max = ceiling(num_img/30), style = 3)
 
-for (i in 1:ceiling(num_img/100)) {
+for (i in 1:ceiling(num_img/30)) {
   
-  img_array <- array(0, dim = c(256, 256, 3, 100))
+  img_array <- array(0, dim = c(256, 256, 3, 30))
   
-  for (j in 1:100) {
+  for (j in 1:30) {
     if (seq_img > num_img) {
       img_array <- img_array[,,,1:(j-1)]
       break
@@ -32,8 +32,8 @@ for (i in 1:ceiling(num_img/100)) {
   }
   
   pred_list <- my_predict(model = YOLO_model, img = img_array, ctx = mx.gpu())
-  pred_box_info[[i]] <- Decode_fun(pred_list, anchor_boxs = anchor_boxs, cut_prob = 0.5, cut_overlap = 0.5)
-  pred_box_info[[i]]$img_ID <- pred_box_info[[i]]$img_ID + (i - 1) * 100
+  pred_box_info[[i]] <- Decode_fun(pred_list, anchor_boxs = anchor_boxs, cut_prob = 0.5, cut_overlap = 0.3)
+  pred_box_info[[i]]$img_ID <- pred_box_info[[i]]$img_ID + (i - 1) * 30
   
   setTxtProgressBar(pb, i)
   

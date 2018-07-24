@@ -302,21 +302,17 @@ my.yolo_trainer <- function (symbol, Iterator_list, val_iter = NULL,
       current_epoch <- (k - 1) * length(Iterator_list) + j
       max_epoch <- length(Iterator_list) * num_round
       
-      if (current_epoch <= max_epoch * 0.1) {
+      if (current_epoch <= max_epoch * 0.4) {
         
-        my_optimizer <- mx.opt.create(name = "adam", learning.rate = 1e-3, beta1 = 0.9, beta2 = 0.999, wd = 1e-4)
+        my_optimizer <- mx.opt.create(name = "sgd", learning.rate = 5e-2, momentum = 0.9, wd = 1e-4)
         
-      } else if (current_epoch > max_epoch * 0.1 & current_epoch <= max_epoch * 0.6) {
+      } else if (current_epoch > max_epoch * 0.4 & current_epoch <= max_epoch * 0.8) {
         
-        my_optimizer <- mx.opt.create(name = "sgd", learning.rate = 1e-1, momentum = 0.9, wd = 1e-4)
-        
-      } else if (current_epoch > max_epoch * 0.6 & current_epoch <= max_epoch * 0.8) {
-        
-        my_optimizer <- mx.opt.create(name = "sgd", learning.rate = 1e-2, momentum = 0.9, wd = 1e-4)
+        my_optimizer <- mx.opt.create(name = "sgd", learning.rate = 5e-3, momentum = 0.9, wd = 1e-4)
         
       } else {
         
-        my_optimizer <- mx.opt.create(name = "sgd", learning.rate = 1e-3, momentum = 0.9, wd = 1e-4)
+        my_optimizer <- mx.opt.create(name = "sgd", learning.rate = 5e-4, momentum = 0.9, wd = 1e-4)
         
       }
       

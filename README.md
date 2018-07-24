@@ -48,7 +48,7 @@ Now we can start to train this model! Because yolo v2 suggest that multi-scale t
 Model performance
 ---
 
-Finally, we get a 16.03% MAP50 in testing set. Following image is the selected predicting results by our model:
+Finally, we get a two models [yolo_v3 (1) & yolo_v3 (2)], snd their MAP50 in testing set are 9.81% and 15.20%. The reason of this MAP is considered as the serious overfitting, so you can add training samples. Following image is the selected predicting results by our model:
 
 <p align="center">
   <img src="Pred_example.jpeg">

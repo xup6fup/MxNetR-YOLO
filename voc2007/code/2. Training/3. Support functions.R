@@ -154,7 +154,7 @@ AP_function <- function (obj_IoU, obj_prob, num_obj, IoU_cut = 0.5) {
   
 }
 
-model_AP_func <- function (model, Iterator, ctx = mx.gpu(), IoU_cut = 0.5) {
+model_AP_func <- function (model, Iterator, ctx = mx.gpu(3), IoU_cut = 0.5) {
   
   Iterator$reset()
   Iterator$iter.next()
@@ -253,10 +253,13 @@ model_AP_func <- function (model, Iterator, ctx = mx.gpu(), IoU_cut = 0.5) {
 }
 
 my.yolo_trainer <- function (symbol, Iterator_list, val_iter = NULL,
-                             ctx = mx.gpu(), num_round = 5, num_iter = 10,
-                             start_val = 5, start_unfixed = 5,
+                             ctx = mx.gpu(), num_round = 5, num_iter = 5,
+                             start_val = 5, start_unfixed = 5, start.learning_rate = 5e-2,
                              prefix = 'model/yolo model/yolo_v3 (voc2007)',
                              Fixed_NAMES = NULL, ARG.PARAMS = NULL, AUX.PARAMS = NULL) {
+  
+  if (!is.null(val_iter)) {map_list <- numeric(num_round * length(Iterator_list) * num_iter)}
+  if (!file.exists(dirname(prefix))) {dir.create(dirname(prefix))}
   
     for (k in 1:num_round) {
     
@@ -299,26 +302,24 @@ my.yolo_trainer <- function (symbol, Iterator_list, val_iter = NULL,
       mx.exec.update.arg.arrays(my_executor, ARG.PARAMS, match.name = TRUE)
       mx.exec.update.aux.arrays(my_executor, AUX.PARAMS, match.name = TRUE)
       
-      current_epoch <- (k - 1) * length(Iterator_list) + j
-      max_epoch <- length(Iterator_list) * num_round
+      current_round <- (k - 1) * length(Iterator_list) + j
+      max_round <- length(Iterator_list) * num_round
       
-      if (current_epoch <= max_epoch * 0.4) {
+      if (current_round <= max_round * 0.4) {
         
-        my_optimizer <- mx.opt.create(name = "sgd", learning.rate = 5e-2, momentum = 0.9, wd = 1e-4)
+        my_optimizer <- mx.opt.create(name = "sgd", learning.rate = start.learning_rate, momentum = 0.9, wd = 1e-4)
         
-      } else if (current_epoch > max_epoch * 0.4 & current_epoch <= max_epoch * 0.8) {
+      } else if (current_round > max_round * 0.4 & current_round <= max_round * 0.8) {
         
-        my_optimizer <- mx.opt.create(name = "sgd", learning.rate = 5e-3, momentum = 0.9, wd = 1e-4)
+        my_optimizer <- mx.opt.create(name = "sgd", learning.rate = start.learning_rate/10, momentum = 0.9, wd = 1e-4)
         
       } else {
         
-        my_optimizer <- mx.opt.create(name = "sgd", learning.rate = 5e-4, momentum = 0.9, wd = 1e-4)
+        my_optimizer <- mx.opt.create(name = "sgd", learning.rate = start.learning_rate/100, momentum = 0.9, wd = 1e-4)
         
       }
       
       my_updater <- mx.opt.get.updater(optimizer = my_optimizer, weights = my_executor$ref.arg.arrays)
-      
-      if (!is.null(val_iter)) {map_list <- numeric(num_iter)}
       
       for (i in 1:num_iter) {
         
@@ -326,6 +327,7 @@ my.yolo_trainer <- function (symbol, Iterator_list, val_iter = NULL,
         batch_loss <-  list()
         batch_seq <- 0
         t0 <- Sys.time()
+        current_epoch <- i + ((k - 1) * length(Iterator_list) + (j - 1)) * num_iter
         
         #3. Forward/Backward
         
@@ -342,15 +344,15 @@ my.yolo_trainer <- function (symbol, Iterator_list, val_iter = NULL,
           batch_loss[[length(batch_loss) + 1]] <- as.array(my_executor$ref.outputs[[1]])
           
           if (batch_seq %% 50 == 0) {
-            message(paste0("Batch [", batch_seq, "] loss =  ", 
-                           formatC(mean(unlist(batch_loss)), 4, format = "f"), " (Speed: ",
+            message(paste0("epoch [", current_epoch, "] batch [", batch_seq, "] loss =  ", 
+                           formatC(mean(unlist(batch_loss)), 6, format = "f"), " (Speed: ",
                            formatC(batch_seq * batch_size/as.numeric(Sys.time() - t0, units = 'secs'), format = "f", 2), " samples/sec)"))
           }
           
         }
         
-        message(paste0("epoch = ", i,
-                       ": loss = ", formatC(mean(unlist(batch_loss)), format = "f", 4),
+        message(paste0("epoch [", current_epoch,
+                       "] loss = ", formatC(mean(unlist(batch_loss)), format = "f", 6),
                        " (Speed: ", formatC(batch_seq * batch_size/as.numeric(Sys.time() - t0, units = 'secs'), format = "f", 2), " samples/sec)"))
         
         my_model <- mxnet:::mx.model.extract.model(symbol = symbol,
@@ -358,27 +360,24 @@ my.yolo_trainer <- function (symbol, Iterator_list, val_iter = NULL,
         
         my_model[[2]] <- append(my_model[[2]], ARG.PARAMS[names(ARG.PARAMS) %in% Fixed_NAMES])
         my_model[[2]] <- my_model[[2]][!names(my_model[[2]]) %in% dim(input_shape)]
-        mx.model.save(my_model, prefix, i)
+        mx.model.save(my_model, prefix, current_epoch)
         
         if (!is.null(val_iter) & k >= start_val) {
           
           ap_list <- model_AP_func(model = my_model, Iterator = val_iter, IoU_cut = 0.5)
-          map_list[i] <- mean(ap_list)
-          message(paste0("epoch = ", i, ": MAP50 = ", formatC(map_list[i], format = "f", 4)))
+          map_list[current_epoch] <- mean(ap_list)
+          message(paste0("epoch [", current_epoch, "] MAP50 = ", formatC(map_list[current_epoch], format = "f", 4)))
+          message(paste0("best epoch [", which.max(map_list), "] MAP50 = ", formatC(max(map_list), format = "f", 4)))
           
         }
         
       }
-      
-      deleted_list <- list.files(dirname(prefix), pattern = '*.params', full.names = TRUE)
-      deleted_list <- deleted_list[!grepl('0000', deleted_list, fixed = TRUE)]
       
       if (!is.null(val_iter) & k >= start_val) {
         my_model <- mx.model.load(prefix = prefix, iteration = which.max(map_list))
       }
       
       mx.model.save(my_model, prefix, 0)
-      file.remove(deleted_list)
       
       ARG.PARAMS <- my_model[[2]]
       AUX.PARAMS <- my_model[[3]]

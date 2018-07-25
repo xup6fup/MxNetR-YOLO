@@ -6,7 +6,7 @@ resize_test_data_path <- 'voc2007/data/test_jpg_list.RData'
 revised_test_box_info_path <- 'voc2007/data/test_info.RData'
 IoU_cut <- 0.5
 
-YOLO_model <- mx.model.load('model/yolo model (voc2007)/yolo_v3 (2)', 0)
+YOLO_model <- mx.model.load('model/yolo model (voc2007)/yolo_v3 (1)', 0)
 
 load(resize_test_data_path)
 load(revised_test_box_info_path)

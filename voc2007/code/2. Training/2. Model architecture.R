@@ -9,39 +9,8 @@ library(magrittr)
 
 # Load MobileNet v2
 
-Pre_Trained_model <- mx.model.load('model/pretrained model/mobilev2', 0)
-
-# Get the internal output
-
-Mobile_symbol <- Pre_Trained_model$symbol
-
-Mobile_All_layer <- Mobile_symbol$get.internals()
-
-lvl1_out <- which(Mobile_All_layer$outputs == 'conv3_2_linear_bn_output') %>% Mobile_All_layer$get.output()
-lvl2_out <- which(Mobile_All_layer$outputs == 'conv4_7_linear_bn_output') %>% Mobile_All_layer$get.output()
-lvl3_out <- which(Mobile_All_layer$outputs == 'conv6_3_linear_bn_output') %>% Mobile_All_layer$get.output()
-
-# mx.symbol.infer.shape(lvl3_out, data = c(256, 256, 3, 7))$out.shapes
-
-# conv3_2_linear_bn_output out shape = 32 32 32 n (if input shape = 256 256 3 n)
-# conv4_7_linear_bn_output out shape = 16 16 96 n (if input shape = 256 256 3 n)
-# conv6_3_linear_bn_output out shape = 8 8 320 n (if input shape = 256 256 3 n)
-
-# Convolution layer for specific mission and training new parameters
-
-# 1. Additional some architecture for better learning
-
-# Libraries
-
-library(mxnet)
-library(magrittr)
-
-## Define the model architecture
-## Use pre-trained model and fine tuning
-
-# Load MobileNet v2
-
-Pre_Trained_model <- mx.model.load('model/pretrained model/mobilev2', 0)
+#Pre_Trained_model <- mx.model.load('model/pretrained model/mobilev2', 0)
+Pre_Trained_model <- mx.model.load('model/yolo model (voc2007)/yolo_v3 (1)', 0)
 
 # Get the internal output
 
@@ -53,12 +22,10 @@ lvl1_out <- which(Mobile_All_layer$outputs == 'block_4_6_output') %>% Mobile_All
 lvl2_out <- which(Mobile_All_layer$outputs == 'block_5_2_output') %>% Mobile_All_layer$get.output()
 lvl3_out <- which(Mobile_All_layer$outputs == 'conv6_3_linear_bn_output') %>% Mobile_All_layer$get.output()
 
-# mx.symbol.infer.shape(lvl1_out, data = c(256, 256, 3, 7))$out.shapes
-# mx.symbol.infer.shape(lvl2_out, data = c(256, 256, 3, 7))$out.shapes
 # mx.symbol.infer.shape(lvl3_out, data = c(256, 256, 3, 7))$out.shapes
 
-# block_4_6_output out shape = 32 32 64 n (if input shape = 256 256 3 n)
-# block_5_2_output out shape = 16 16 96 n (if input shape = 256 256 3 n)
+# conv3_2_linear_bn_output out shape = 32 32 32 n (if input shape = 256 256 3 n)
+# conv4_7_linear_bn_output out shape = 16 16 96 n (if input shape = 256 256 3 n)
 # conv6_3_linear_bn_output out shape = 8 8 320 n (if input shape = 256 256 3 n)
 
 # Convolution layer for specific mission and training new parameters
@@ -130,9 +97,11 @@ CONV_function <- function (indata, num_filters = 256, name = 'lvl1', stage = 1) 
   
 }
 
-YOLO_map_function <- function (indata, final_map = 75, num_box = 3, name = 'lvl1') {
+YOLO_map_function <- function (indata, final_map = 75, num_box = 3, drop = 0.2, name = 'lvl1') {
   
-  conv <- mx.symbol.Convolution(data = indata, kernel = c(1, 1), stride = c(1, 1), pad = c(0, 0),
+  dp <- mx.symbol.Dropout(data = indata, p = drop, name = paste0(name, '_drop'))
+  
+  conv <- mx.symbol.Convolution(data = dp, kernel = c(1, 1), stride = c(1, 1), pad = c(0, 0),
                                 no.bias = FALSE, num.filter = final_map, name = paste0(name, '_linearmap'))
   
   inter_split <- mx.symbol.SliceChannel(data = conv, num_outputs = final_map,
@@ -170,9 +139,9 @@ lvl1_conv_3 <- CONV_function(indata = lvl1_conv_2, num_filters = 192, name = 'lv
 
 yolomap_list <- list()
 
-yolomap_list[[1]] <- YOLO_map_function(indata = lvl1_conv_3, final_map = 75, name = 'lvl1')
-yolomap_list[[2]] <- YOLO_map_function(indata = lvl2_conv_3, final_map = 75, name = 'lvl2')
-yolomap_list[[3]] <- YOLO_map_function(indata = lvl3_conv_3, final_map = 75, name = 'lvl3')
+yolomap_list[[1]] <- YOLO_map_function(indata = lvl1_conv_3, final_map = 75, drop = 0.2, name = 'lvl1')
+yolomap_list[[2]] <- YOLO_map_function(indata = lvl2_conv_3, final_map = 75, drop = 0.2, name = 'lvl2')
+yolomap_list[[3]] <- YOLO_map_function(indata = lvl3_conv_3, final_map = 75, drop = 0.2, name = 'lvl3')
 
 # 2. Custom loss function
 

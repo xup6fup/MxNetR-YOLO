@@ -38,6 +38,13 @@ Show_img <- function (img, box_info = NULL, col_bbox = '#FFFFFF00', col_label = 
   rasterImage(img, 0, 1, 1, 0, interpolate=FALSE)
   
   if (!is.null(box_info)) {
+    box_info[box_info[,2] < 0, 2] <- 0
+    box_info[box_info[,3] > 1, 3] <- 1
+    box_info[box_info[,4] > 1, 4] <- 1
+    box_info[box_info[,5] < 0, 5] <- 0
+  }
+  
+  if (!is.null(box_info)) {
     for (i in 1:nrow(box_info)) {
       if (is.null(box_info$col[i])) {COL_LABEL <- col_label} else {COL_LABEL <- box_info$col[i]}
       text(x = (box_info[i,2] + box_info[i,3])/2, y = box_info[i,5],

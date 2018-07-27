@@ -12,6 +12,7 @@ This is a simple example for implementing the YOLO by MxNetR. The idea is devolo
 
 2. To add a COCO2017 training example and model.
 
+3. A clearer explanation for yolo model.
 
 # If you just want to use this model for predicting
 
@@ -65,7 +66,7 @@ Finally, we get a model, snd the MAP50 in testing set is 20.29%. The reason of t
 
 You can use the code ["5. Test the model performance.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/voc2007/code/2.%20Training/5.%20Test%20the%20model%20performance.R) for conducting this process. Because this is a simple example for yolo v3, our database only includes 4,008 training images and 1,003 validation images, so I consider this result is very good.
 
-# If your understanding of YOLO is not clear, you can start with a simple example for YOLO v1
+# If your understanding of YOLO is not clear, you can start with a simple example for yolo v1
 
 Download dataset and pre-processing
 ---
@@ -78,9 +79,18 @@ For more detail. Please see：
 
 I will use [this website](https://apache-mxnet.s3-accelerate.amazonaws.com/gluon/dataset/pikachu/) for downloading this dataset. You can use the code ["1. Build jpg data from source.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/pikachu/code/1.%20Processing%20data/1.%20Build%20jpg%20data%20from%20source.R) to quickly download this dataset (84 MB for training and 10 MB for testing), and further procees them to jpeg file. **Note: this repository has included all data of pikachu dataset, so you can skip this step.**
 
-For follow-up training tasks, we need to process these data to .RData file. You can use the codes ["2-1. Processing image (train).R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/voc2007/code/1.%20Processing%20data/2-1.%20pre-processing%20image%20(train%20%26%20val).R) and ["2-2. Processing image (val).R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/voc2007/code/1.%20Processing%20data/2-2.%20pre-processing%20image%20(test).R) to do this work. You can find them in the folder 'pikachu/data' **Note: you can also skip this step.**
+For follow-up training tasks, we need to process these data to .RData file. You can use the codes ["2-1. Processing image (train).R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/pikachu/code/1.%20Processing%20data/2-1.%20Processing%20image%20(train).R) and ["2-2. Processing image (val).R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/pikachu/code/1.%20Processing%20data/2-2.%20Processing%20image%20(val).R) to do this work. You can find them in the folder 'pikachu/data'. **Note: you can also skip this step.**
 
 Training stage
 ---
 
+The first step for using MxNet to train a yolo model is to build an iterator. You can use the codes ["1. Encode, Decode & Iterator.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/pikachu/code/2.%20Training/1.%20Encode%2C%20Decode%20%26%20Iterator.R) for conducting this process. It is worth noting that bounding boxes are needed to encode as a special form for following training. Moreover, the encoded labels also need to pass a decoding process for restoring bounding boxes. The encode and decode function are the core of the yolo model. **Note: yolo v1 is not include the anchor box, this means the anchor box happens to be equal as the grid size.**
 
+The next step is to define the model architecture. We use a pretrained model (training by imagenet for image recognition) and fine tune it. Here we contains a MxNet implementation of a MobileNets_V2-based YOLO networks. For details, please read the [above descriptions](https://github.com/xup6fup/MxNetR-YOLO#training-stage). The code ["2. Model architecture.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/pikachu/code/2.%20Training/2.%20Model%20architecture.R) includes yolo predict architecture and loss function, you can try to learn yolo v1 from these codes.
+
+Now we can start to train this model! The support functions can be found from ["3. Support functions.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/pikachu/code/2.%20Training/3.%20Support%20functions.R), and finally you can use ["4. Train a yolo model.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/pikachu/code/2.%20Training/4.%20Train%20a%20yolo%20model.R) for training this model.
+
+Model performance
+---
+
+Finally, we get a model, snd the MAP50 in validation set is XX.XX%. You can use the code ["1. Prediction.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/pikachu/code/3.%20Predicting/1.%20Prediction.R) for predicting an image. Here we have trained a model for your predicting. The 'yolo_v1-0000.params' and 'yolo_v1-symbol.json' can be found in the folder 'model/yolo model (pikachu)'.

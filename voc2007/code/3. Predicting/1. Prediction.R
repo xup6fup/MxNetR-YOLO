@@ -311,7 +311,7 @@ load('voc2007/anchor_boxs (yolo v3).RData')
 
 # Read jpg and resize
 
-img <- readJPEG('test_img.jpeg')
+img <- readJPEG('example image/test_img.jpeg')
 img <- resizeImage(image = img, width = 256, height = 256, method = 'bilinear')
 dim(img) <- c(256, 256, 3, 1)
 

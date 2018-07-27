@@ -67,6 +67,8 @@ Show_img <- function (img, box_info = NULL, show_prob = FALSE, col_bbox = '#FFFF
     box_info[box_info[,5] < 0, 5] <- 0
   }
   
+  box_info <- box_info[order(box_info[,6]),]
+  
   if (!is.null(box_info)) {
     for (i in 1:nrow(box_info)) {
       if (is.null(box_info$col[i])) {COL_LABEL <- col_label} else {COL_LABEL <- box_info$col[i]}
@@ -229,7 +231,7 @@ Decode_fun <- function (encode_array, cut_prob = 0.5, cut_overlap = 0.3,
 
 # Load well-train model
 
-YOLO_model <- mx.model.load('model/yolo model (pikachu)/yolo_v1', 17)
+YOLO_model <- mx.model.load('model/yolo model (pikachu)/yolo_v1', 0)
 
 # Read jpg and resize
 
@@ -242,9 +244,8 @@ dim(img) <- c(256, 256, 3, 1)
 # Predict and decode
 
 pred_out <- mxnet:::predict.MXFeedForwardModel(model = YOLO_model, X = img)
-pred_box_info <- Decode_fun(pred_out, cut_prob = 0.3, cut_overlap = 0.3)
+pred_box_info <- Decode_fun(pred_out, cut_prob = 0.5, cut_overlap = 0.3)
 
 # Show image
 
-Show_img(img = img[,,,1], box_info = pred_box_info, show_grid = FALSE)
-
+Show_img(img = img[,,,1], box_info = pred_box_info, show_prob = TRUE, show_grid = FALSE)

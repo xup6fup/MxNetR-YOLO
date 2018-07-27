@@ -23,10 +23,6 @@ for (i in 1:length(ARG_in_net_name)){
 
 ARG.PARAMS <- new_arg$arg.params
 
-## Define fixed layer
-
-Layer_to_fixed <- ARG_in_net_name
-
 # Model Training
 
 my_logger <- mx.metric.logger$new()
@@ -34,14 +30,13 @@ my_logger <- mx.metric.logger$new()
 my_iter <- my_iterator_func(iter = NULL, batch_size = 16, img_size = 256, aug_crop = TRUE, aug_flip = TRUE)
 
 YOLO_model <- mx.model.FeedForward.create(final_yolo_loss, X = my_iter,
-                                          ctx = mx.gpu(), begin.round = 1, num.round = 50,
-                                          optimizer = 'sgd', learning.rate = 5e-2, momentum = 0.9, wd = 1e-4,
-                                          fixed.param = Layer_to_fixed, arg.params = ARG.PARAMS, 
+                                          ctx = mx.gpu(), begin.round = 1, num.round = 100,
+                                          optimizer = 'sgd', learning.rate = 1e-2, momentum = 0.9, wd = 1e-4,
+                                          arg.params = ARG.PARAMS, 
                                           eval.metric = my.eval.metric.loss,
                                           input.names = 'data', output.names = 'label',
                                           batch.end.callback = my.callback_batch(batch.size = 16, frequency = 10),
                                           epoch.end.callback = my.callback_epoch(out_symbol = yolomap, logger = my_logger,
                                                                                  prefix = 'model/yolo model (pikachu)/yolo_v1',
-                                                                                 fixed.params = ARG.PARAMS[names(ARG.PARAMS) %in% Layer_to_fixed],
                                                                                  period = 1))
 

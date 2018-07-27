@@ -5,6 +5,51 @@ library(mxnet)
 library(data.table)
 library(magrittr)
 
+# Custom functions
+
+IoU_function <- function (label, pred) {
+  
+  overlap_width <- min(label[,2], pred[,2]) - max(label[,1], pred[,1])
+  overlap_height <- min(label[,3], pred[,3]) - max(label[,4], pred[,4])
+  
+  if (overlap_width > 0 & overlap_height > 0) {
+    
+    pred_size <- (pred[,2]-pred[,1])*(pred[,3]-pred[,4])
+    label_size <- (label[,2]-label[,1])*(label[,3]-label[,4])
+    overlap_size <- overlap_width * overlap_height
+    
+    return(overlap_size/(pred_size + label_size - overlap_size))
+    
+  } else {
+    
+    return(0)
+    
+  }
+  
+}
+
+# Based on https://github.com/rafaelpadilla/Object-Detection-Metrics
+
+AP_function <- function (obj_IoU, obj_prob, num_obj, IoU_cut = 0.5) {
+  
+  sort_obj_IoU <- obj_IoU[order(obj_prob, decreasing=TRUE)]
+  pred_postive <- sort_obj_IoU > IoU_cut
+  
+  cum_TP <- cumsum(pred_postive)
+  
+  P_list <- cum_TP * pred_postive / seq_along(pred_postive)
+  P_list <- P_list[P_list!=0]
+  
+  while (sum(diff(P_list) > 0) >= 1) {
+    diff_P_list <- diff(P_list)
+    diff_P_list[diff_P_list < 0] <- 0
+    P_list <- P_list + c(diff_P_list, 0)
+  }
+  
+  return(sum(P_list)/num_obj)
+  
+}
+
 # Custom callback function
 
 my.eval.metric.loss <- mx.metric.custom(

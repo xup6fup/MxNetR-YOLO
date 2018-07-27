@@ -19,7 +19,7 @@ This is a simple example for implementing the YOLO by MxNetR. The idea is devolo
 You can use the code ["1. Prediction.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/voc2007/code/3.%20Predicting/1.%20Prediction.R) for predicting an image. Here we prepared a well-trained model for your experiment. The 'yolo_v3 (1)-0000.params' and 'yolo_v3 (1)-symbol.json' can be found in the folder 'model/yolo model (voc2007)'. Here we use the 'test_img.jpeg' for testing the model. The left image is the raw image, and the right one is the prediction result by yolo v3 model.
 
 <p align="center">
-  <img src="pred_test_img.jpeg">
+  <img src="example image/pred_test_img.jpeg">
 </p>
 
 Let try to predict other image!
@@ -61,12 +61,14 @@ Model performance
 Finally, we get a model, snd the MAP50 in testing set is 20.29%. The reason of this MAP is considered as the serious overfitting, so you can add training samples. Following image is the selected predicting results by our model:
 
 <p align="center">
-  <img src="Pred_example.jpeg">
+  <img src="example image/Pred_example.jpeg">
 </p>
 
 You can use the code ["5. Test the model performance.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/voc2007/code/2.%20Training/5.%20Test%20the%20model%20performance.R) for conducting this process. Because this is a simple example for yolo v3, our database only includes 4,008 training images and 1,003 validation images, so I consider this result is very good.
 
 # If your understanding of YOLO is not clear, you can start with a simple example for yolo v1
+
+**Note: this toy example is very small, even to use cpu for training also can get an acceptable speed (~5 samples/sec).**
 
 Download dataset and pre-processing
 ---
@@ -93,4 +95,16 @@ Now we can start to train this model! The support functions can be found from ["
 Model performance
 ---
 
-Finally, we get a model, snd the MAP50 in validation set is XX.XX%. You can use the code ["1. Prediction.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/pikachu/code/3.%20Predicting/1.%20Prediction.R) for predicting an image. Here we have trained a model for your predicting. The 'yolo_v1-0000.params' and 'yolo_v1-symbol.json' can be found in the folder 'model/yolo model (pikachu)'.
+Finally, we get a model, snd the MAP50 in validation set is XX.XX%. You can use the code ["1. Prediction.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/pikachu/code/3.%20Predicting/1.%20Prediction.R) for predicting an image. Here we have trained a model for your predicting. The 'yolo_v1-0000.params' and 'yolo_v1-symbol.json' can be found in the folder 'model/yolo model (pikachu)'. The 100st epoch model predictions are show as following:
+
+<p align="center">
+  <img src="example image/pikachu_pred.jpeg">
+</p>
+
+We can see that there are many candidate boxes beside Pikachu. Most of the boxes are actually wrong, however, if you only display the box with highest probability, the prediction results will be very good.
+
+<p align="center">
+  <img src="example image/pikachu_pred (highest bbox).jpeg">
+</p>
+
+You can use the code ["5. Test the model performance.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/pikachu/code/2.%20Training/5.%20Test%20the%20model%20performance.R) for calculating MAP50. Finally, the MAP50 in validation set is 14.66%.

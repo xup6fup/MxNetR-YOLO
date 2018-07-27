@@ -4,6 +4,15 @@ YOLO v3 in MxNetR
 
 This is a simple example for implementing the YOLO by MxNetR. The idea is devoloped by Joseph Chet Redmon, and related details can be found in his [website](https://pjreddie.com/darknet/yolo/?utm_source=next.36kr.com). This is a simple example for MxNetR user, I will use a relatively small dataset for demonstrating how it work. 
 
+# Future plan
+
+**This repository is still being continuously updated**, and the future plan includes following items:
+
+1. To adjust the appropriate hyperparameters for more accurate yolo model.
+
+2. To add a COCO2017 training example and model.
+
+
 # If you just want to use this model for predicting
 
 You can use the code ["1. Prediction.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/voc2007/code/3.%20Predicting/1.%20Prediction.R) for predicting an image. Here we prepared a well-trained model for your experiment. The 'yolo_v3 (1)-0000.params' and 'yolo_v3 (1)-symbol.json' can be found in the folder 'model/yolo model (voc2007)'. Here we use the 'test_img.jpeg' for testing the model. The left image is the raw image, and the right one is the prediction result by yolo v3 model.
@@ -55,3 +64,23 @@ Finally, we get a model, snd the MAP50 in testing set is 20.29%. The reason of t
 </p>
 
 You can use the code ["5. Test the model performance.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/voc2007/code/2.%20Training/5.%20Test%20the%20model%20performance.R) for conducting this process. Because this is a simple example for yolo v3, our database only includes 4,008 training images and 1,003 validation images, so I consider this result is very good.
+
+# If your understanding of YOLO is not clear, you can start with a simple example for YOLO v1
+
+Download dataset and pre-processing
+---
+
+The pikachu dataset is a simple object detection task building by MxNet support team. It use a synthetic toy dataset by rendering images from open-sourced 3D Pikachu models. 
+
+For more detail. Please see：
+-  https://gluon.mxnet.io/chapter08_computer-vision/object-detection.html.
+-  http://zh.gluon.ai/chapter_computer-vision/pikachu.html.
+
+I will use [this website](https://apache-mxnet.s3-accelerate.amazonaws.com/gluon/dataset/pikachu/) for downloading this dataset. You can use the code ["1. Build jpg data from source.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/pikachu/code/1.%20Processing%20data/1.%20Build%20jpg%20data%20from%20source.R) to quickly download this dataset (84 MB for training and 10 MB for testing), and further procees them to jpeg file. **Note: this repository has included all data of pikachu dataset, so you can skip this step.**
+
+For follow-up training tasks, we need to process these data to .RData file. You can use the codes ["2-1. Processing image (train).R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/voc2007/code/1.%20Processing%20data/2-1.%20pre-processing%20image%20(train%20%26%20val).R) and ["2-2. Processing image (val).R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/voc2007/code/1.%20Processing%20data/2-2.%20pre-processing%20image%20(test).R) to do this work. You can find them in the folder 'pikachu/data' **Note: you can also skip this step.**
+
+Training stage
+---
+
+

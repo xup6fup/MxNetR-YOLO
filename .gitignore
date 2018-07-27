@@ -3,16 +3,21 @@
 .Rapp.history
 
 # Session Data files
+
 .RData
+
 voc2007/data/test/*
 voc2007/data/train/*
 voc2007/data/VOCtest_06-Nov-2007.tar
 voc2007/data/VOCtrainval_06-Nov-2007.tar
-data/*
+
+coco2017/*
+
 model/yolo model (coco2017)/*
 model/pretrained model/resnext-50-0000.params
 model/pretrained model/resnext-50-symbol.json
-coco2017/*
+
+Apps/*
 
 # Example code in package build process
 *-Ex.R

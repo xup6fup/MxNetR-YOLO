@@ -5862,7 +5862,7 @@
     {
       "op": "Dropout", 
       "name": "lvl1_drop", 
-      "attrs": {"p": "0.2"}, 
+      "attrs": {"p": "0"}, 
       "inputs": [[597, 0, 0]]
     }, 
     {
@@ -12121,7 +12121,7 @@
     {
       "op": "Dropout", 
       "name": "lvl2_drop", 
-      "attrs": {"p": "0.2"}, 
+      "attrs": {"p": "0"}, 
       "inputs": [[532, 0, 0]]
     }, 
     {
@@ -18385,7 +18385,7 @@
     {
       "op": "Dropout", 
       "name": "lvl3_drop", 
-      "attrs": {"p": "0.2"}, 
+      "attrs": {"p": "0"}, 
       "inputs": [[467, 0, 0]]
     }, 
     {

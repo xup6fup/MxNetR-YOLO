@@ -30,8 +30,8 @@ my_logger <- mx.metric.logger$new()
 my_iter <- my_iterator_func(iter = NULL, batch_size = 16, img_size = 256, aug_crop = TRUE, aug_flip = TRUE)
 
 YOLO_model <- mx.model.FeedForward.create(final_yolo_loss, X = my_iter,
-                                          ctx = mx.gpu(), begin.round = 1, num.round = 100,
-                                          optimizer = 'sgd', learning.rate = 1e-2, momentum = 0.9, wd = 1e-4,
+                                          ctx = mx.gpu(), begin.round = 1, num.round = 200,
+                                          optimizer = 'sgd', learning.rate = 5e-3, momentum = 0.9, wd = 1e-4,
                                           arg.params = ARG.PARAMS, 
                                           eval.metric = my.eval.metric.loss,
                                           input.names = 'data', output.names = 'label',

@@ -58,7 +58,7 @@ Now we can start to train this model! Because yolo v2 suggest that multi-scale t
 Model performance
 ---
 
-Finally, we get a model, snd the MAP50 in testing set is 20.29%. The reason of this MAP is considered as the serious overfitting, so you can add training samples. Following image is the selected predicting results by our model:
+Finally, we get a model, snd the MAP50 in testing set is 24.12%. The reason of this MAP is considered as the serious overfitting, so you can add training samples. Following image is the selected predicting results by our model:
 
 <p align="center">
   <img src="example image/Pred_example.jpeg">
@@ -95,7 +95,7 @@ Now we can start to train this model! The support functions can be found from ["
 Model performance
 ---
 
-Finally, we get a model, snd the MAP50 in validation set is XX.XX%. You can use the code ["1. Prediction.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/pikachu/code/3.%20Predicting/1.%20Prediction.R) for predicting an image. Here we have trained a model for your predicting. The 'yolo_v1-0000.params' and 'yolo_v1-symbol.json' can be found in the folder 'model/yolo model (pikachu)'. The 100st epoch model predictions are show as following:
+Finally, we get a model, snd the MAP50 in validation set is XX.XX%. You can use the code ["1. Prediction.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/pikachu/code/3.%20Predicting/1.%20Prediction.R) for predicting an image. Here we have trained a model for your predicting. The 'yolo_v1-0000.params' and 'yolo_v1-symbol.json' can be found in the folder 'model/yolo model (pikachu)'. The 50st epoch model predictions are show as following:
 
 <p align="center">
   <img src="example image/pikachu_pred.jpeg">
@@ -107,4 +107,4 @@ We can see that there are many candidate boxes beside Pikachu. Most of the boxes
   <img src="example image/pikachu_pred (highest bbox).jpeg">
 </p>
 
-You can use the code ["5. Test the model performance.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/pikachu/code/2.%20Training/5.%20Test%20the%20model%20performance.R) for calculating MAP50. Finally, the MAP50 in validation set is 14.66%.
+You can use the code ["5. Test the model performance.R"](https://github.com/xup6fup/MxNetR-YOLO/blob/master/pikachu/code/2.%20Training/5.%20Test%20the%20model%20performance.R) for calculating MAP50. Finally, the MAP50 in validation set is 17.70%.

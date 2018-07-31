@@ -26,13 +26,13 @@ IoU_function <- function (label, pred) {
   
 }
 
-Show_img <- function (img, box_info = NULL, col_bbox = '#FFFFFF00', col_label = '#00A0A0FF',
+Show_img <- function (img, box_info = NULL, show_prob = FALSE, col_bbox = '#FFFFFF00', col_label = '#00A0A0FF',
                       show_grid = TRUE, n.grid = 8, col_grid = '#FF0000FF') {
   
   require(imager)
   
   par(mar = rep(0, 4))
-  plot(NA, xlim = c(0.04, 0.96), ylim = c(0.96, 0.04), xaxt = "n", yaxt = "n", bty = "n")
+  plot(NA, xlim = c(0.03, 0.97), ylim = c(0.97, 0.03), xaxt = "n", yaxt = "n", bty = "n")
   img <- (img - min(img))/(max(img) - min(img))
   img <- as.raster(img)
   rasterImage(img, 0, 1, 1, 0, interpolate=FALSE)
@@ -47,12 +47,22 @@ Show_img <- function (img, box_info = NULL, col_bbox = '#FFFFFF00', col_label = 
   if (!is.null(box_info)) {
     for (i in 1:nrow(box_info)) {
       if (is.null(box_info$col[i])) {COL_LABEL <- col_label} else {COL_LABEL <- box_info$col[i]}
-      text(x = (box_info[i,2] + box_info[i,3])/2, y = box_info[i,5],
-           labels = paste0(box_info[i,1], ' (', formatC(box_info[i,6]*100, 0, format = 'f'), '%)'),
-           offset = 0.3, pos = 1, col = COL_LABEL, font = 2)
+      if (show_prob) {
+        TEXT <- paste0(box_info[i,1], ' (', formatC(box_info[i,6]*100, 0, format = 'f'), '%)')
+      } else {
+        TEXT <- box_info[i,1]
+      }
+      size <- max(box_info[i,3] - box_info[i,2], 0.2)
+      rect(xleft = box_info[i,2], xright = box_info[i,2] + 0.06*sqrt(size)*nchar(TEXT),
+           ybottom = box_info[i,5] + 0.08*sqrt(size), ytop = box_info[i,5],
+           col = COL_LABEL, border = COL_LABEL, lwd = 0)
+      text(x = box_info[i,2] + 0.03*sqrt(size) * nchar(TEXT),
+           y = box_info[i,5] + 0.04*sqrt(size),
+           labels = TEXT,
+           col = 'white', cex = 1.5*sqrt(size), font = 2)
       rect(xleft = box_info[i,2], xright = box_info[i,3],
            ybottom = box_info[i,4], ytop = box_info[i,5],
-           col = col_bbox, border = COL_LABEL, lwd = 1.5)
+           col = col_bbox, border = COL_LABEL, lwd = 5*sqrt(size))
     }
   }
   
@@ -69,7 +79,6 @@ Show_img <- function (img, box_info = NULL, col_bbox = '#FFFFFF00', col_label = 
   }
   
 }
-
 Encode_fun <- function (box_info, n.grid = c(32, 16, 8), eps = 1e-8, n.anchor = 3,
                         obj_name = c('person', 'bird', 'cat', 'cow', 'dog',
                                      'horse', 'sheep', 'aeroplane', 'bicycle',
@@ -318,7 +327,7 @@ dim(img) <- c(256, 256, 3, 1)
 # Predict and decode
 
 pred_list <- my_predict(model = YOLO_model, img = img, ctx = mx.gpu())
-pred_box_info <- Decode_fun(pred_list, anchor_boxs = anchor_boxs, cut_prob = 0.5, cut_overlap = 0.5)
+pred_box_info <- Decode_fun(pred_list, anchor_boxs = anchor_boxs, cut_prob = 0.5, cut_overlap = 0.3)
 
 # Show image
 

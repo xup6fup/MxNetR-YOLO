@@ -110,8 +110,10 @@ YOLO_map_function <- function (indata, final_map = 75, num_box = 3, drop = 0.2, 
   new_list <- list()
   
   for (k in 1:final_map) {
-    if (!(final_map %% num_box) %in% c(4:5)) {
+    if (!(k %% num_box) %in% c(4:5)) {
       new_list[[k]] <- mx.symbol.Activation(inter_split[[k]], act.type = 'sigmoid', name = paste0(name, "_yolomap_", k))
+    } else {
+      new_list[[k]] <- inter_split[[k]]
     }
   }
   
